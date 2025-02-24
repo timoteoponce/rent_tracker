@@ -24,8 +24,21 @@ Web application that allows to register multiple rent locations to keep track of
 - Update a property, here, the location can't change, the other data can be updated
 - Disable property, the property will not be removed, only will be usable when enabled again (data will be kept always)
 - Enable property, (data will be kept always)
-- Rent a property to a tennant
+- Rent a property to a tenant
 - Close rental of property, when the rental is finished
 - Terminate rental of property, when something unexpected happened and the rental must be forcibly finished
 - Add rental payment
 - Update rental payment, this will not overwrite the prior payment, a new one must be created and the payment logs must be kept
+
+
+## How to setup
+
+1. Clone this repository
+2. Install .net framework 9, we use `dotnet` and `Visual Studio Code` for development
+3. Using a console go to the directory where the repository has been cloned, and execute:
+```
+dotnet restore
+dotnet run
+```
+4. Open a web browser at (http://localhost:5111)[http://localhost:5111], the application is there
+
