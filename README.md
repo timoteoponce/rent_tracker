@@ -34,11 +34,11 @@ Web application that allows to register multiple rent locations to keep track of
 ## How to setup
 
 1. Clone this repository
-2. Install .net framework 9, we use `dotnet` and `Visual Studio Code` for development
+2. Install **.net framework 9**, we use `dotnet` and `Visual Studio Code` for development
 3. Using a console go to the directory where the repository has been cloned, and execute:
 ```
 dotnet restore
 dotnet run
 ```
-4. Open a web browser at (http://localhost:5111)[http://localhost:5111], the application is there
+4. Open a web browser at (http://localhost:5112)[http://localhost:5112], the application is there
 
