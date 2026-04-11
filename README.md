@@ -43,6 +43,6 @@ Web application that allows to register multiple rent locations to keep track of
 - Must be design-responsive, will need to work on desktop, mobile and tablet
 - It must use standard CSS since it's quite capable now, no additional frameworks
 - The design must be simple and clear, the users are gonna be regular
-- Design the application for future changes, using migrations, good coding practices and keeping complexity controlled
+- Design the application for future changes, using migrations, good coding practices and keeping complexity controlled, the migrations must be automatically applied on startup
 - Consider that AIs will be used extensively in this project, define proper build guidelines, proper documentation and instructions for AI agents (AGENTS.md, copilot instructions, etc.)
 - The project will be hosted in GitHub and built with Github actions, there's no need to place it in a registry yet, the build must result in a docker image we can download and load
