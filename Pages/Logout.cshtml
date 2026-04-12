@@ -1,0 +1,13 @@
+@page "/logout"
+@model RentTracker.Pages.LogoutModel
+@{
+    // This page handles POST logout
+}
+
+<form method="post" style="display: none;" id="logout-form">
+    @Html.AntiForgeryToken()
+</form>
+
+<script>
+    document.getElementById('logout-form').submit();
+</script>

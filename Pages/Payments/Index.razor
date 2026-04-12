@@ -1,0 +1,88 @@
+@page "/payments"
+@attribute [Authorize]
+@inject ApplicationDbContext Context
+
+<PageTitle>Payments - Rent Tracker</PageTitle>
+
+<h1>Payments</h1>
+
+<div class="mb-2">
+    <a href="/payments/add" class="btn btn-primary">Record Payment</a>
+</div>
+
+@if (_loading)
+{
+    <div class="d-flex align-center gap-1">
+        <div class="spinner"></div>
+        <span>Loading...</span>
+    </div>
+}
+else if (!_payments.Any())
+{
+    <div class="alert alert-info">No payments found.</div>
+}
+else
+{
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Property</th>
+                    <th>Tenant</th>
+                    <th>Period</th>
+                    <th>Amount</th>
+                    <th>Version</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var payment in _payments.Where(p => p.PreviousPaymentId == null))
+                {
+                    <tr>
+                        <td>@payment.PaymentDate.ToString("MMM dd, yyyy")</td>
+                        <td>
+                            @if (payment.Rental?.Property != null)
+                            {
+                                <a href="/properties/@payment.Rental.Property.Id">Property #@payment.Rental.Property.Id</a>
+                            }
+                            else
+                            {
+                                <span>Unknown</span>
+                            }
+                        </td>
+                        <td>@(payment.Rental?.Tenant?.FullName ?? "Unknown")</td>
+                        <td>@payment.PeriodStart.ToString("MMM dd") - @payment.PeriodEnd.ToString("MMM dd")</td>
+                        <td>@payment.Amount.ToString("N2") BOB</td>
+                        <td>@payment.Version</td>
+                        <td>
+                            <a href="/payments/edit/@payment.Id" class="btn btn-sm btn-outline">Update</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private bool _loading = true;
+    private List<RentalPayment> _payments = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPayments();
+        _loading = false;
+    }
+
+    private async Task LoadPayments()
+    {
+        _payments = await Context.RentalPayments
+            .Include(p => p.Rental)
+            .ThenInclude(r => r!.Property)
+            .Include(p => p.Rental)
+            .ThenInclude(r => r!.Tenant)
+            .OrderByDescending(p => p.PaymentDate)
+            .ToListAsync();
+    }
+}

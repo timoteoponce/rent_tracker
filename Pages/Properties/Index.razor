@@ -1,0 +1,119 @@
+@page "/properties"
+@attribute [Authorize]
+@inject ApplicationDbContext Context
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Navigation
+
+<PageTitle>Properties - Rent Tracker</PageTitle>
+
+<h1>Properties</h1>
+
+<div class="d-flex justify-between align-center mb-2">
+    <div>
+        <a href="/properties/add" class="btn btn-primary">Add Property</a>
+    </div>
+    <div class="d-flex gap-1">
+        <select @bind="_filterStatus" class="form-control" style="width: auto;">
+            <option value="">All</option>
+            <option value="enabled">Enabled Only</option>
+            <option value="disabled">Disabled Only</option>
+        </select>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <div class="d-flex align-center gap-1">
+        <div class="spinner"></div>
+        <span>Loading...</span>
+    </div>
+}
+else if (!_properties.Any())
+{
+    <div class="alert alert-info">
+        No properties found. <a href="/properties/add">Add your first property</a>.
+    </div>
+}
+else
+{
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Location</th>
+                    <th class="hide-mobile">Specs</th>
+                    <th>Status</th>
+                    <th class="text-right">Price</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var property in _filteredProperties)
+                {
+                    <tr>
+                        <td>#@property.Id</td>
+                        <td>
+                            <a href="@property.GoogleMapsLink" target="_blank" title="View on Google Maps">
+                                @property.LocationLatitude.ToString("0.0000"), @property.LocationLongitude.ToString("0.0000")
+                            </a>
+                        </td>
+                        <td class="hide-mobile">
+                            @property.SurfaceSquareMeters m², @property.NumberOfRooms rooms
+                        </td>
+                        <td>
+                            @if (property.IsEnabled)
+                            {
+                                <span class="badge badge-success">Enabled</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-danger">Disabled</span>
+                            }
+                            @if (property.CurrentRental != null)
+                            {
+                                <span class="badge badge-info">Rented</span>
+                            }
+                        </td>
+                        <td class="text-right">@property.CurrentPrice.ToString("N2") BOB</td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <a href="/properties/edit/@property.Id" class="btn btn-sm btn-outline">Edit</a>
+                                <a href="/properties/@property.Id" class="btn btn-sm btn-outline">Details</a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private bool _loading = true;
+    private List<Property> _properties = [];
+    private string _filterStatus = "";
+
+    private IEnumerable<Property> _filteredProperties => _filterStatus switch
+    {
+        "enabled" => _properties.Where(p => p.IsEnabled),
+        "disabled" => _properties.Where(p => !p.IsEnabled),
+        _ => _properties
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProperties();
+        _loading = false;
+    }
+
+    private async Task LoadProperties()
+    {
+        _properties = await Context.Properties
+            .Include(p => p.Rentals)
+            .Include(p => p.Owners)
+            .ThenInclude(o => o.Owner)
+            .OrderBy(p => p.Id)
+            .ToListAsync();
+    }
+}

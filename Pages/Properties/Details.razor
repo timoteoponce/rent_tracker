@@ -1,0 +1,190 @@
+@page "/properties/{Id:int}"
+@attribute [Authorize]
+@inject ApplicationDbContext Context
+@inject NavigationManager Navigation
+
+<PageTitle>Property Details - Rent Tracker</PageTitle>
+
+@if (_loading)
+{
+    <div class="d-flex align-center gap-1">
+        <div class="spinner"></div>
+        <span>Loading...</span>
+    </div>
+}
+else if (_property == null)
+{
+    <div class="alert alert-danger">Property not found.</div>
+}
+else
+{
+    <div class="d-flex justify-between align-center mb-2">
+        <h1>Property #@_property.Id</h1>
+        <div class="d-flex gap-1">
+            <a href="/properties/edit/@_property.Id" class="btn btn-primary">Edit</a>
+            <a href="/properties" class="btn btn-outline">Back</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="d-flex justify-between align-center mb-2">
+            <h2>General Information</h2>
+            @if (_property.IsEnabled)
+            {
+                <span class="badge badge-success">Enabled</span>
+            }
+            else
+            {
+                <span class="badge badge-danger">Disabled</span>
+            }
+        </div>
+
+        <div class="form-group">
+            <label>Location</label>
+            <p>
+                <a href="@_property.GoogleMapsLink" target="_blank">
+                    @_property.LocationLatitude.ToString("0.0000"), @_property.LocationLongitude.ToString("0.0000")
+                </a>
+                <span class="text-muted">(Click to view on Google Maps)</span>
+            </p>
+        </div>
+
+        <div class="form-group">
+            <label>Surface</label>
+            <p>@_property.SurfaceSquareMeters m²</p>
+        </div>
+
+        <div class="form-group">
+            <label>Rooms</label>
+            <p>@_property.NumberOfRooms</p>
+        </div>
+
+        <h3>Facilities</h3>
+        <div class="facilities-grid">
+            @if (_property.HasBathroom) { <span class="badge badge-info">Bathroom</span> }
+            @if (_property.HasKitchen) { <span class="badge badge-info">Kitchen</span> }
+            @if (_property.HasGarage) { <span class="badge badge-info">Garage</span> }
+            @if (_property.HasHotWater) { <span class="badge badge-info">Hot Water</span> }
+            @if (_property.HasAC) { <span class="badge badge-info">AC</span> }
+            @if (_property.HasBackyard) { <span class="badge badge-info">Backyard</span> }
+            @if (_property.HasSecurity) { <span class="badge badge-info">Security</span> }
+            @if (_property.HasDoorbell) { <span class="badge badge-info">Doorbell</span> }
+        </div>
+
+        <h3>Financial</h3>
+        <div class="form-group">
+            <label>Current Price</label>
+            <p>@_property.CurrentPrice.ToString("N2") BOB / month</p>
+        </div>
+
+        <div class="form-group">
+            <label>Warranty</label>
+            <p>@_property.CurrentWarranty.ToString("N2") BOB</p>
+        </div>
+
+        <h3>Owners</h3>
+        @if (_property.Owners.Any())
+        {
+            <ul>
+                @foreach (var owner in _property.Owners)
+                {
+                    <li>@(owner.Owner?.FullName ?? "Unknown") (since @owner.Since.ToString("MMM yyyy"))</li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="text-muted">No owners assigned</p>
+        }
+    </div>
+
+    <div class="card">
+        <div class="d-flex justify-between align-center mb-2">
+            <h2>Rental History</h2>
+            @if (_property.IsEnabled && _property.CurrentRental == null)
+            {
+                <a href="/rentals/add?propertyId=@_property.Id" class="btn btn-success">Rent Property</a>
+            }
+        </div>
+
+        @if (_rentals.Any())
+        {
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Tenant</th>
+                            <th>Monthly Rent</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var rental in _rentals)
+                        {
+                            <tr>
+                                <td>@rental.StartDate.ToString("MMM dd, yyyy")</td>
+                                <td>@(rental.EndDate?.ToString("MMM dd, yyyy") ?? "Active")</td>
+                                <td>@(rental.Tenant?.FullName ?? "Unknown")</td>
+                                <td>@rental.MonthlyRent.ToString("N2") BOB</td>
+                                <td>
+                                    @switch (rental.Status)
+                                    {
+                                        case RentalStatus.Active:
+                                            <span class="badge badge-success">Active</span>
+                                            break;
+                                        case RentalStatus.Closed:
+                                            <span class="badge badge-info">Closed</span>
+                                            break;
+                                        case RentalStatus.Terminated:
+                                            <span class="badge badge-warning">Terminated</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    <a href="/rentals/@rental.Id" class="btn btn-sm btn-outline">View</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="text-muted">No rental history</p>
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Property? _property;
+    private List<Rental> _rentals = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProperty();
+        _loading = false;
+    }
+
+    private async Task LoadProperty()
+    {
+        _property = await Context.Properties
+            .Include(p => p.Owners)
+            .ThenInclude(o => o.Owner)
+            .Include(p => p.Rentals)
+            .ThenInclude(r => r!.Tenant)
+            .FirstOrDefaultAsync(p => p.Id == Id);
+
+        if (_property != null)
+        {
+            _rentals = _property.Rentals.OrderByDescending(r => r.StartDate).ToList();
+        }
+    }
+}

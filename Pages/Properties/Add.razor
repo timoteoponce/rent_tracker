@@ -1,0 +1,266 @@
+@page "/properties/add"
+@attribute [Authorize(Roles = "SystemAdministrator")]
+@inject ApplicationDbContext Context
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Add Property - Rent Tracker</PageTitle>
+
+<h1>Add Property</h1>
+
+<EditForm Model="_property" OnValidSubmit="HandleSubmit" class="card">
+    <DataAnnotationsValidator />
+    
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger">@_errorMessage</div>
+    }
+
+    <div class="form-group">
+        <label for="latitude">Latitude</label>
+        <InputNumber id="latitude" @bind-Value="_property.LocationLatitude" class="form-control" required />
+        <ValidationMessage For="() => _property.LocationLatitude" />
+    </div>
+
+    <div class="form-group">
+        <label for="longitude">Longitude</label>
+        <InputNumber id="longitude" @bind-Value="_property.LocationLongitude" class="form-control" required />
+        <ValidationMessage For="() => _property.LocationLongitude" />
+    </div>
+
+    <div class="form-group">
+        <label for="surface">Surface (m²)</label>
+        <InputNumber id="surface" @bind-Value="_property.SurfaceSquareMeters" class="form-control" min="1" required />
+        <ValidationMessage For="() => _property.SurfaceSquareMeters" />
+    </div>
+
+    <div class="form-group">
+        <label for="rooms">Number of Rooms</label>
+        <InputNumber id="rooms" @bind-Value="_property.NumberOfRooms" class="form-control" min="1" required />
+        <ValidationMessage For="() => _property.NumberOfRooms" />
+    </div>
+
+    <h3>Facilities</h3>
+    <div class="facilities-grid">
+        <label class="checkbox-group">
+            <InputCheckbox @bind-Value="_property.HasBathroom" />
+            <span>Bathroom</span>
+        </label>
+        <label class="checkbox-group">
+            <InputCheckbox @bind-Value="_property.HasKitchen" />
+            <span>Kitchen</span>
+        </label>
+        <label class="checkbox-group">
+            <InputCheckbox @bind-Value="_property.HasGarage" />
+            <span>Garage</span>
+        </label>
+        <label class="checkbox-group">
+            <InputCheckbox @bind-Value="_property.HasHotWater" />
+            <span>Hot Water</span>
+        </label>
+        <label class="checkbox-group">
+            <InputCheckbox @bind-Value="_property.HasAC" />
+            <span>Air Conditioning</span>
+        </label>
+        <label class="checkbox-group">
+            <InputCheckbox @bind-Value="_property.HasBackyard" />
+            <span>Backyard</span>
+        </label>
+        <label class="checkbox-group">
+            <InputCheckbox @bind-Value="_property.HasSecurity" />
+            <span>Security</span>
+        </label>
+        <label class="checkbox-group">
+            <InputCheckbox @bind-Value="_property.HasDoorbell" />
+            <span>Doorbell</span>
+        </label>
+    </div>
+
+    <h3>Financial</h3>
+    <div class="form-group">
+        <label for="price">Monthly Price (BOB)</label>
+        <InputNumber id="price" @bind-Value="_property.CurrentPrice" class="form-control" min="0" step="0.01" required />
+        <ValidationMessage For="() => _property.CurrentPrice" />
+    </div>
+
+    <div class="form-group">
+        <label for="warranty">Warranty Amount (BOB)</label>
+        <InputNumber id="warranty" @bind-Value="_property.CurrentWarranty" class="form-control" min="0" step="0.01" required />
+        <ValidationMessage For="() => _property.CurrentWarranty" />
+    </div>
+
+    <h3>Owners</h3>
+    <div class="form-group">
+        <label>Select Owners</label>
+        @if (_users.Any())
+        {
+            <div class="facilities-grid">
+                @foreach (var user in _users)
+                {
+                    <label class="checkbox-group">
+                        <input type="checkbox" 
+                               checked="@_selectedOwnerIds.Contains(user.Id)"
+                               @onchange="(e) => ToggleOwner(user.Id, (bool)(e.Value ?? false))" />
+                        <span>@user.FullName</span>
+                    </label>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="text-muted">No users available</p>
+        }
+    </div>
+
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary" disabled="@_saving">
+            @if (_saving)
+            {
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save Property</span>
+            }
+        </button>
+        <a href="/properties" class="btn btn-outline">Cancel</a>
+    </div>
+</EditForm>
+
+@code {
+    private PropertyInput _property = new();
+    private List<ApplicationUser> _users = [];
+    private List<string> _selectedOwnerIds = [];
+    private string? _errorMessage;
+    private bool _saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _users = (await UserManager.GetUsersInRoleAsync("Owner")).OrderBy(u => u.FullName).ToList();
+    }
+
+    private void ToggleOwner(string userId, bool selected)
+    {
+        if (selected)
+        {
+            if (!_selectedOwnerIds.Contains(userId))
+            {
+                _selectedOwnerIds.Add(userId);
+            }
+        }
+        else
+        {
+            _selectedOwnerIds.Remove(userId);
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (_saving) return;
+        _saving = true;
+        _errorMessage = null;
+
+        try
+        {
+            // Create property
+            var property = new Property
+            {
+                LocationLatitude = _property.LocationLatitude,
+                LocationLongitude = _property.LocationLongitude,
+                SurfaceSquareMeters = _property.SurfaceSquareMeters,
+                NumberOfRooms = _property.NumberOfRooms,
+                HasBathroom = _property.HasBathroom,
+                HasKitchen = _property.HasKitchen,
+                HasGarage = _property.HasGarage,
+                HasHotWater = _property.HasHotWater,
+                HasAC = _property.HasAC,
+                HasBackyard = _property.HasBackyard,
+                HasSecurity = _property.HasSecurity,
+                HasDoorbell = _property.HasDoorbell,
+                CurrentPrice = _property.CurrentPrice,
+                CurrentWarranty = _property.CurrentWarranty,
+                IsEnabled = true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            Context.Properties.Add(property);
+            await Context.SaveChangesAsync();
+
+            // Add owners
+            foreach (var ownerId in _selectedOwnerIds)
+            {
+                Context.PropertyOwners.Add(new PropertyOwner
+                {
+                    PropertyId = property.Id,
+                    OwnerId = ownerId,
+                    Since = DateTime.UtcNow
+                });
+            }
+
+            await Context.SaveChangesAsync();
+
+            // Create initial price history
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var currentUser = await UserManager.GetUserAsync(authState.User);
+            if (currentUser != null)
+            {
+                Context.PropertyPriceHistory.Add(new PropertyPriceHistory
+                {
+                    PropertyId = property.Id,
+                    Price = property.CurrentPrice,
+                    Warranty = property.CurrentWarranty,
+                    EffectiveFrom = DateTime.UtcNow,
+                    ChangedByUserId = currentUser.Id
+                });
+                await Context.SaveChangesAsync();
+            }
+
+            Navigation.NavigateTo("/properties");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error saving property: {ex.Message}";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private class PropertyInput
+    {
+        [Required]
+        [Range(-90, 90)]
+        public decimal LocationLatitude { get; set; }
+
+        [Required]
+        [Range(-180, 180)]
+        public decimal LocationLongitude { get; set; }
+
+        [Required]
+        [Range(1, int.MaxValue)]
+        public int SurfaceSquareMeters { get; set; }
+
+        [Required]
+        [Range(1, int.MaxValue)]
+        public int NumberOfRooms { get; set; }
+
+        public bool HasBathroom { get; set; }
+        public bool HasKitchen { get; set; }
+        public bool HasGarage { get; set; }
+        public bool HasHotWater { get; set; }
+        public bool HasAC { get; set; }
+        public bool HasBackyard { get; set; }
+        public bool HasSecurity { get; set; }
+        public bool HasDoorbell { get; set; }
+
+        [Required]
+        [Range(0, double.MaxValue)]
+        public decimal CurrentPrice { get; set; }
+
+        [Required]
+        [Range(0, double.MaxValue)]
+        public decimal CurrentWarranty { get; set; }
+    }
+}

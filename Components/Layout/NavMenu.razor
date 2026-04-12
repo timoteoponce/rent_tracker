@@ -1,0 +1,43 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Navigation
+
+<nav class="navbar">
+    <div class="nav-brand">
+        <a href="/">Rent Tracker</a>
+    </div>
+    
+    <button class="nav-toggle" @onclick="ToggleMenu" aria-label="Toggle menu">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+    
+    <div class="nav-links @(_menuOpen ? "show" : "")">
+        <AuthorizeView>
+            <Authorized Context="authContext">
+                <a href="/">Dashboard</a>
+                <a href="/properties">Properties</a>
+                <a href="/rentals">Rentals</a>
+                <a href="/payments">Payments</a>
+                <a href="/reports">Reports</a>
+                @if (authContext.User.IsInRole("SystemAdministrator"))
+                {
+                    <a href="/users">Users</a>
+                }
+                <a href="/logout" class="nav-link-button">Logout (@authContext.User.Identity?.Name)</a>
+            </Authorized>
+            <NotAuthorized>
+                <a href="/login">Login</a>
+            </NotAuthorized>
+        </AuthorizeView>
+    </div>
+</nav>
+
+@code {
+    private bool _menuOpen = false;
+    
+    private void ToggleMenu()
+    {
+        _menuOpen = !_menuOpen;
+    }
+}

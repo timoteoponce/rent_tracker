@@ -1,0 +1,51 @@
+@page "/login"
+@model RentTracker.Pages.LoginModel
+
+@{
+    ViewData["Title"] = "Login";
+}
+
+<div class="auth-container">
+    <div class="card">
+        <div class="auth-title">
+            <h1>Rent Tracker</h1>
+            <p class="text-muted">Sign in to continue</p>
+        </div>
+        
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="alert alert-danger">@Model.ErrorMessage</div>
+        }
+        
+        <form method="post">
+            @Html.AntiForgeryToken()
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="Username" value="@Model.Username" required autofocus />
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="Password" required />
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-group">
+                    <input type="checkbox" name="RememberMe" value="true" />
+                    <span>Remember me</span>
+                </label>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">Sign In</button>
+        </form>
+        
+        @if (Model.ShowDefaultCredentials)
+        {
+            <div class="alert alert-info mt-2">
+                <strong>Default credentials:</strong><br />
+                Username: admin<br />
+                Password: admin123
+            </div>
+        }
+    </div>
+</div>

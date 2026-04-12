@@ -1,0 +1,50 @@
+name: Build and Package
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+    
+    - name: Publish
+      run: dotnet publish --no-build --configuration Release --output ./publish
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: rent-tracker-build
+        path: ./publish
+        retention-days: 30
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build Docker image
+      run: |
+        docker build -t rent-tracker:latest .
+        docker save rent-tracker:latest -o rent-tracker-docker.tar
+    
+    - name: Upload Docker image
+      uses: actions/upload-artifact@v4
+      with:
+        name: rent-tracker-docker
+        path: rent-tracker-docker.tar
+        retention-days: 30

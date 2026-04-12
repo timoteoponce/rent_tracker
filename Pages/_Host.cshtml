@@ -1,0 +1,9 @@
+@page "/"
+@namespace RentTracker.Pages
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    Layout = "_Layout";
+}
+
+<component type="typeof(App)" render-mode="Server" />
