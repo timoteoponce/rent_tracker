@@ -1,0 +1,113 @@
+@page "{id:guid}"
+@model RentTracker.Web.Pages.Properties.UnitsModel
+@{
+    ViewData["Title"] = $"Manage Units - {Model.Property.Name}";
+}
+
+<div class="page-header">
+    <h2>Manage Units: @Model.Property.Name</h2>
+    <a asp-page="./Details" asp-route-id="@Model.Property.Id" class="btn btn-secondary">Back to Property</a>
+</div>
+
+<div class="page-content">
+    @if (!Model.Property.CanBeLeasedByUnits)
+    {
+        <div class="alert alert-warning">
+            This property is not configured to be leased by units. 
+            <a asp-page="./Edit" asp-route-id="@Model.Property.Id">Edit property</a> to enable unit leasing.
+        </div>
+    }
+    else
+    {
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="card-title">Add New Unit</h4>
+            </div>
+            <form method="post" asp-page-handler="AddUnit" class="form-row">
+                <input type="hidden" name="propertyId" value="@Model.Property.Id" />
+                <div class="form-group">
+                    <label>Unit Name</label>
+                    <input name="unitName" class="form-control" placeholder="e.g., Front Unit, Back Unit" required />
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <input name="unitDescription" class="form-control" placeholder="Optional description" />
+                </div>
+                <div class="form-group">
+                    <label>Price (BOB)</label>
+                    <input name="unitPrice" type="number" step="0.01" class="form-control" required />
+                </div>
+                <div class="form-group">
+                    <label>Warranty (BOB)</label>
+                    <input name="unitWarranty" type="number" step="0.01" class="form-control" required />
+                </div>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-primary">Add Unit</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">Existing Units</h4>
+            </div>
+            @if (Model.Units.Any())
+            {
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Price</th>
+                                <th>Warranty</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var unit in Model.Units)
+                            {
+                                <tr>
+                                    <td>@unit.Name</td>
+                                    <td>@(unit.Description ?? "-")</td>
+                                    <td>Bs. @unit.Price.ToString("N2")</td>
+                                    <td>Bs. @unit.Warranty.ToString("N2")</td>
+                                    <td>
+                                        @if (unit.IsAvailable)
+                                        {
+                                            <span class="badge badge-success">Available</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-warning">Occupied</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (unit.IsAvailable)
+                                        {
+                                            <form method="post" asp-page-handler="DeleteUnit" class="d-inline">
+                                                <input type="hidden" name="propertyId" value="@Model.Property.Id" />
+                                                <input type="hidden" name="unitId" value="@unit.Id" />
+                                                <button type="submit" class="btn btn-sm btn-danger" data-confirm="Are you sure you want to delete this unit?">Delete</button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Cannot delete (occupied)</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted">No units defined yet. Add units above.</p>
+            }
+        </div>
+    }
+</div>

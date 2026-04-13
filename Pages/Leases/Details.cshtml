@@ -1,0 +1,119 @@
+@page "{id:guid}"
+@model RentTracker.Web.Pages.Leases.DetailsModel
+@{
+    ViewData["Title"] = "Lease Details";
+}
+
+<div class="page-header">
+    <h2>Lease Details</h2>
+    <a asp-page="./Index" class="btn btn-secondary">Back to List</a>
+</div>
+
+<div class="page-content">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">@Model.Lease.Property.Name</h3>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Property</label>
+                <p class="form-control-static">@Model.Lease.Property.Name</p>
+            </div>
+            <div class="form-group">
+                <label>Unit</label>
+                <p class="form-control-static">@(Model.Lease.PropertyUnit?.Name ?? "Whole Property")</p>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Tenant</label>
+                <p class="form-control-static">@Model.Lease.Tenant.FullName</p>
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <p class="form-control-static">
+                    <span class="badge @(Model.Lease.Status == "Active" ? "badge-success" : Model.Lease.Status == "Closed" ? "badge-info" : "badge-danger")">
+                        @Model.Lease.Status
+                    </span>
+                </p>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Monthly Rent</label>
+                <p class="form-control-static">Bs. @Model.Lease.AgreedPrice.ToString("N2")</p>
+            </div>
+            <div class="form-group">
+                <label>Security Deposit</label>
+                <p class="form-control-static">Bs. @Model.Lease.AgreedWarranty.ToString("N2")</p>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Start Date</label>
+                <p class="form-control-static">@Model.Lease.StartDate.ToString("dd MMM yyyy")</p>
+            </div>
+            <div class="form-group">
+                <label>End Date</label>
+                <p class="form-control-static">@(Model.Lease.EndDate?.ToString("dd MMM yyyy") ?? "Ongoing")</p>
+            </div>
+        </div>
+        @if (!string.IsNullOrEmpty(Model.Lease.TerminationReason))
+        {
+            <div class="form-group">
+                <label>Termination Reason</label>
+                <p class="form-control-static text-danger">@Model.Lease.TerminationReason</p>
+            </div>
+        }
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Payment History</h3>
+        </div>
+        @if (Model.Payments.Any())
+        {
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var payment in Model.Payments)
+                        {
+                            <tr>
+                                <td>@payment.ForPeriod.ToString("MMM yyyy")</td>
+                                <td>Bs. @payment.Amount.ToString("N2") @payment.Currency</td>
+                                <td>@payment.PaymentDate.ToString("dd MMM yyyy")</td>
+                                <td>
+                                    <span class="badge @(payment.Status == "Received" ? "badge-success" : payment.Status == "Pending" ? "badge-warning" : "badge-danger")">
+                                        @payment.Status
+                                    </span>
+                                </td>
+                                <td>@payment.Notes</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="text-muted">No payments recorded for this lease.</p>
+        }
+    </div>
+
+    @if (Model.Lease.Status == "Active")
+    {
+        <div class="mt-3">
+            <a asp-page="./Close" asp-route-id="@Model.Lease.Id" class="btn btn-secondary">Close Lease</a>
+            <a asp-page="./Terminate" asp-route-id="@Model.Lease.Id" class="btn btn-danger">Terminate Lease</a>
+        </div>
+    }
+</div>

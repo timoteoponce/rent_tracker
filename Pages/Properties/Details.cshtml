@@ -1,0 +1,205 @@
+@page "{id:guid}"
+@model RentTracker.Web.Pages.Properties.DetailsModel
+@{
+    ViewData["Title"] = "Property Details";
+}
+
+<div class="page-header">
+    <h2>@Model.Property.Name</h2>
+    <div>
+        <a asp-page="./Edit" asp-route-id="@Model.Property.Id" class="btn btn-secondary">Edit</a>
+        <a asp-page="./Index" class="btn btn-secondary">Back to List</a>
+    </div>
+</div>
+
+<div class="page-content">
+    <div class="form-row">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Basic Information</h3>
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <p>
+                    @if (Model.Property.IsEnabled)
+                    {
+                        <span class="badge badge-success">Enabled</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-danger">Disabled</span>
+                    }
+                </p>
+            </div>
+            <div class="form-group">
+                <label>Location</label>
+                <p>
+                    @if (!string.IsNullOrEmpty(Model.Property.Location))
+                    {
+                        <a href="@Model.Property.Location" target="_blank" rel="noopener noreferrer">View on Google Maps</a>
+                    }
+                    else
+                    {
+                        <span class="text-muted">Not specified</span>
+                    }
+                </p>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Surface Area</label>
+                    <p>@(Model.Property.SurfaceSquareMeters?.ToString("N2") ?? "-") m²</p>
+                </div>
+                <div class="form-group">
+                    <label>Number of Rooms</label>
+                    <p>@(Model.Property.NumberOfRooms?.ToString() ?? "-")</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Pricing</h3>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Monthly Rent</label>
+                    <p>Bs. @Model.Property.CurrentPrice.ToString("N2")</p>
+                </div>
+                <div class="form-group">
+                    <label>Security Deposit</label>
+                    <p>Bs. @Model.Property.CurrentWarranty.ToString("N2")</p>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Can be Leased by Units</label>
+                <p>@(Model.Property.CanBeLeasedByUnits ? "Yes" : "No")</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Facilities</h3>
+        </div>
+        <div class="form-row">
+            <div class="form-check">
+                <input type="checkbox" checked="@Model.Property.HasBathroom" disabled /> Bathroom
+            </div>
+            <div class="form-check">
+                <input type="checkbox" checked="@Model.Property.HasKitchen" disabled /> Kitchen
+            </div>
+            <div class="form-check">
+                <input type="checkbox" checked="@Model.Property.HasGarage" disabled /> Garage
+            </div>
+            <div class="form-check">
+                <input type="checkbox" checked="@Model.Property.HasHotWater" disabled /> Hot Water
+            </div>
+            <div class="form-check">
+                <input type="checkbox" checked="@Model.Property.HasAirConditioning" disabled /> AC
+            </div>
+            <div class="form-check">
+                <input type="checkbox" checked="@Model.Property.HasBackyard" disabled /> Backyard
+            </div>
+            <div class="form-check">
+                <input type="checkbox" checked="@Model.Property.HasSecurity" disabled /> Security
+            </div>
+            <div class="form-check">
+                <input type="checkbox" checked="@Model.Property.HasDoorbell" disabled /> Doorbell
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Property.CanBeLeasedByUnits && Model.Property.Units.Any())
+    {
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Units</h3>
+            </div>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var unit in Model.Property.Units)
+                        {
+                            <tr>
+                                <td>@unit.Name</td>
+                                <td>Bs. @unit.Price.ToString("N2")</td>
+                                <td>
+                                    @if (unit.IsAvailable)
+                                    {
+                                        <span class="badge badge-success">Available</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-warning">Occupied</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Lease History</h3>
+        </div>
+        @if (Model.LeaseHistory.Any())
+        {
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Tenant</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Status</th>
+                            <th>Monthly Rent</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var lease in Model.LeaseHistory)
+                        {
+                            <tr>
+                                <td>@lease.Tenant.FullName</td>
+                                <td>@lease.StartDate.ToString("dd MMM yyyy")</td>
+                                <td>@(lease.EndDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                                <td>
+                                    <span class="badge @(lease.Status == "Active" ? "badge-success" : lease.Status == "Closed" ? "badge-info" : "badge-danger")">
+                                        @lease.Status
+                                    </span>
+                                </td>
+                                <td>Bs. @lease.AgreedPrice.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="text-muted">No lease history for this property.</p>
+        }
+    </div>
+
+    <div class="mt-4">
+        @if (User.IsInRole("Administrator") || User.IsInRole("Owner"))
+        {
+            <form asp-page="./ToggleStatus" method="post" class="d-inline">
+                <input type="hidden" name="id" value="@Model.Property.Id" />
+                <button type="submit" class="btn @(Model.Property.IsEnabled ? "btn-danger" : "btn-success")" data-confirm="Are you sure you want to @(Model.Property.IsEnabled ? "disable" : "enable") this property?">
+                    @(Model.Property.IsEnabled ? "Disable Property" : "Enable Property")
+                </button>
+            </form>
+            <a asp-page="./Units" asp-route-id="@Model.Property.Id" class="btn btn-secondary">Manage Units</a>
+        }
+    </div>
+</div>

@@ -1,0 +1,66 @@
+@page
+@model RentTracker.Web.Pages.Properties.IndexModel
+@{
+    ViewData["Title"] = "Properties";
+}
+
+<div class="page-header">
+    <h2>Properties</h2>
+    <a asp-page="./Create" class="btn btn-primary">Add Property</a>
+</div>
+
+<div class="page-content">
+    @if (Model.Properties.Any())
+    {
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Location</th>
+                        <th>Price</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var property in Model.Properties)
+                    {
+                        <tr>
+                            <td>@property.Name</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(property.Location))
+                                {
+                                    <a href="@property.Location" target="_blank" rel="noopener noreferrer">View Map</a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td>Bs. @property.CurrentPrice.ToString("N2")</td>
+                            <td>
+                                @if (property.IsEnabled)
+                                {
+                                    <span class="badge badge-success">Enabled</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-danger">Disabled</span>
+                                }
+                            </td>
+                            <td>
+                                <a asp-page="./Details" asp-route-id="@property.Id" class="btn btn-sm btn-secondary">View</a>
+                                <a asp-page="./Edit" asp-route-id="@property.Id" class="btn btn-sm btn-secondary">Edit</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted">No properties found. <a asp-page="./Create">Add your first property</a>.</p>
+    }
+</div>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - RentTracker</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-brand">
+                <h1><a href="~/">RentTracker</a></h1>
+            </div>
+            <nav class="header-nav">
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <a asp-page="/Index">Dashboard</a>
+                    <a asp-page="/Properties/Index">Properties</a>
+                    <a asp-page="/Leases/Index">Leases</a>
+                    <a asp-page="/Payments/Index">Payments</a>
+                    @if (User.IsInRole(UserRoles.Administrator) || User.IsInRole(UserRoles.Owner))
+                    {
+                        <a asp-page="/Reports/Index">Reports</a>
+                    }
+                }
+            </nav>
+            <div class="header-actions">
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <span class="user-info">@User.Identity.Name (@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value)</span>
+                    <form asp-page="/Account/Logout" method="post" class="logout-form">
+                        <button type="submit" class="btn btn-sm">Logout</button>
+                    </form>
+                }
+            </div>
+        </header>
+
+        <main class="app-main">
+            @RenderBody()
+        </main>
+
+        <footer class="app-footer">
+            <p>&copy; @DateTime.Now.Year - RentTracker</p>
+        </footer>
+    </div>
+
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,42 @@
+# .NET build artifacts
+**/bin/
+**/obj/
+**/out/
+
+# IDE files
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Git
+.git/
+.gitignore
+
+# Docker files
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Data and logs
+data/
+logs/
+*.db
+*.sqlite
+
+# Node (if any)
+node_modules/
+
+# Test projects
+**/tests/
+**/*Tests/
+**/*Test/
+
+# Documentation
+*.md
+!README.md
+AGENTS.md
+
+# Misc
+.DS_Store
+Thumbs.db

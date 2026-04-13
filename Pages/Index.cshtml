@@ -1,0 +1,112 @@
+@page
+@model RentTracker.Web.Pages.IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="page-header">
+    <h2>Dashboard</h2>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <span class="stat-label">Total Properties</span>
+        <span class="stat-value">@Model.TotalProperties</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Active Leases</span>
+        <span class="stat-value">@Model.ActiveLeases</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Total Tenants</span>
+        <span class="stat-value">@Model.TotalTenants</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Pending Payments</span>
+        <span class="stat-value">@Model.PendingPayments</span>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Recent Payments</h3>
+    </div>
+    @if (Model.RecentPayments.Any())
+    {
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Property</th>
+                        <th>Tenant</th>
+                        <th>Period</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var payment in Model.RecentPayments)
+                    {
+                        <tr>
+                            <td>@payment.Lease.Property.Name</td>
+                            <td>@payment.Lease.Tenant.FullName</td>
+                            <td>@payment.ForPeriod.ToString("MMM yyyy")</td>
+                            <td>@payment.Amount.ToString("C") @payment.Currency</td>
+                            <td>
+                                <span class="badge @(payment.Status == "Received" ? "badge-success" : payment.Status == "Pending" ? "badge-warning" : "badge-danger")">
+                                    @payment.Status
+                                </span>
+                            </td>
+                            <td>@payment.PaymentDate.ToString("dd MMM yyyy")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted">No payments recorded yet.</p>
+    }
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Active Leases</h3>
+    </div>
+    @if (Model.ActiveLeasesList.Any())
+    {
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Property</th>
+                        <th>Tenant</th>
+                        <th>Start Date</th>
+                        <th>Monthly Rent</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var lease in Model.ActiveLeasesList)
+                    {
+                        <tr>
+                            <td>@lease.Property.Name</td>
+                            <td>@lease.Tenant.FullName</td>
+                            <td>@lease.StartDate.ToString("dd MMM yyyy")</td>
+                            <td>@lease.AgreedPrice.ToString("C") BOB</td>
+                            <td>
+                                <a asp-page="/Payments/Create" asp-route-leaseId="@lease.Id" class="btn btn-sm btn-primary">Add Payment</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted">No active leases. <a asp-page="/Leases/Create">Create a lease</a> to get started.</p>
+    }
+</div>

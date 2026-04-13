@@ -1,0 +1,54 @@
+# RentTracker - .NET SDK Configuration
+# This file is used by mise (https://mise.jdx.dev/) to manage tool versions
+# Install mise: curl https://mise.run | sh
+# Then run: mise install
+
+[tools]
+dotnet = "9.0.200"
+
+# Environment variables for the project
+[env]
+# ASP.NET Core environment
+ASPNETCORE_ENVIRONMENT = "Development"
+# Database path (relative to project root)
+RENTTRACKER_DB_PATH = "./data/renttracker.db"
+
+# Task definitions
+[tasks.build]
+description = "Build the project"
+run = "dotnet build"
+
+[tasks.run]
+description = "Run the web application"
+run = "dotnet run"
+
+[tasks.test]
+description = "Run tests"
+run = "dotnet test"
+
+[tasks.migrate]
+description = "Run database migrations"
+run = "dotnet ef database update"
+
+[tasks.add-migration]
+description = "Add a new database migration"
+run = "dotnet ef migrations add {{arg(name='name')}}"
+
+[tasks.restore]
+description = "Restore NuGet packages and LibMan libraries"
+run = """
+dotnet restore
+libman restore
+"""
+
+[tasks.clean]
+description = "Clean build artifacts"
+run = "dotnet clean"
+
+[tasks.docker-build]
+description = "Build Docker image"
+run = "docker build -t renttracker:latest ."
+
+[tasks.docker-run]
+description = "Run with Docker Compose"
+run = "docker-compose up -d"

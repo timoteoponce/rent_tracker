@@ -1,0 +1,74 @@
+@page
+@model RentTracker.Web.Pages.Leases.IndexModel
+@{
+    ViewData["Title"] = "Leases";
+}
+
+<div class="page-header">
+    <h2>Leases</h2>
+    <a asp-page="./Create" class="btn btn-primary">Create Lease</a>
+</div>
+
+<div class="page-content">
+    <div class="filters mb-3">
+        <form method="get" class="form-inline">
+            <label>Status:</label>
+            <select asp-for="StatusFilter" class="form-control" onchange="this.form.submit()">
+                <option value="">All</option>
+                <option value="Active">Active</option>
+                <option value="Closed">Closed</option>
+                <option value="Terminated">Terminated</option>
+            </select>
+        </form>
+    </div>
+
+    @if (Model.Leases.Any())
+    {
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Property</th>
+                        <th>Unit</th>
+                        <th>Tenant</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Monthly Rent</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var lease in Model.Leases)
+                    {
+                        <tr>
+                            <td>@lease.Property.Name</td>
+                            <td>@(lease.PropertyUnit?.Name ?? "Whole Property")</td>
+                            <td>@lease.Tenant.FullName</td>
+                            <td>@lease.StartDate.ToString("dd MMM yyyy")</td>
+                            <td>@(lease.EndDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                            <td>Bs. @lease.AgreedPrice.ToString("N2")</td>
+                            <td>
+                                <span class="badge @(lease.Status == "Active" ? "badge-success" : lease.Status == "Closed" ? "badge-info" : "badge-danger")">
+                                    @lease.Status
+                                </span>
+                            </td>
+                            <td>
+                                <a asp-page="./Details" asp-route-id="@lease.Id" class="btn btn-sm btn-secondary">View</a>
+                                @if (lease.Status == "Active")
+                                {
+                                    <a asp-page="./Close" asp-route-id="@lease.Id" class="btn btn-sm btn-secondary">Close</a>
+                                    <a asp-page="./Terminate" asp-route-id="@lease.Id" class="btn btn-sm btn-danger">Terminate</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted">No leases found. <a asp-page="./Create">Create your first lease</a>.</p>
+    }
+</div>

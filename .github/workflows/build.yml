@@ -1,0 +1,101 @@
+name: Build and Package
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '9.0.x'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Install LibMan
+      run: dotnet tool install -g Microsoft.Web.LibraryManager.Cli
+
+    - name: Restore LibMan libraries
+      run: libman restore
+
+    - name: Publish
+      run: dotnet publish --no-build --configuration Release --output ./publish
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: renttracker-app
+        path: ./publish
+        retention-days: 30
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      run: |
+        docker build -t renttracker:${{ github.sha }} .
+        docker tag renttracker:${{ github.sha }} renttracker:latest
+
+    - name: Save Docker image
+      run: docker save renttracker:latest | gzip > renttracker-docker.tar.gz
+
+    - name: Upload Docker image artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: renttracker-docker
+        path: renttracker-docker.tar.gz
+        retention-days: 30
+
+    - name: Create Release Package
+      if: github.ref == 'refs/heads/main'
+      run: |
+        mkdir -p release
+        cp renttracker-docker.tar.gz release/
+        cp docker-compose.yml release/
+        cp README.md release/
+        echo "# RentTracker Docker Package" > release/INSTALL.md
+        echo "" >> release/INSTALL.md
+        echo "## Quick Start" >> release/INSTALL.md
+        echo "" >> release/INSTALL.md
+        echo "1. Extract the Docker image:" >> release/INSTALL.md
+        echo "   gunzip -c renttracker-docker.tar.gz | docker load" >> release/INSTALL.md
+        echo "" >> release/INSTALL.md
+        echo "2. Run with Docker Compose:" >> release/INSTALL.md
+        echo "   docker-compose up -d" >> release/INSTALL.md
+        echo "" >> release/INSTALL.md
+        echo "3. Access the application at http://localhost:8080" >> release/INSTALL.md
+        echo "" >> release/INSTALL.md
+        echo "Default login: admin / admin" >> release/INSTALL.md
+        echo "You will be required to change the password on first login." >> release/INSTALL.md
+        tar -czf renttracker-release-${{ github.run_number }}.tar.gz -C release .
+
+    - name: Upload Release Package
+      if: github.ref == 'refs/heads/main'
+      uses: actions/upload-artifact@v4
+      with:
+        name: renttracker-release-${{ github.run_number }}
+        path: renttracker-release-${{ github.run_number }}.tar.gz
+        retention-days: 90

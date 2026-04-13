@@ -1,0 +1,21 @@
+@page
+@model RentTracker.Web.Pages.ErrorModel
+@{
+    ViewData["Title"] = "Error";
+}
+
+<div class="page-content">
+    <h1 class="text-danger">Error</h1>
+    <h2 class="text-danger">An error occurred while processing your request.</h2>
+
+    @if (Model.ShowRequestId)
+    {
+        <p>
+            <strong>Request ID:</strong> <code>@Model.RequestId</code>
+        </p>
+    }
+
+    <p>
+        <a asp-page="/Index" class="btn btn-primary">Return to Dashboard</a>
+    </p>
+</div>

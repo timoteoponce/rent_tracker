@@ -1,0 +1,77 @@
+@page
+@model RentTracker.Web.Pages.Users.IndexModel
+@{
+    ViewData["Title"] = "User Management";
+}
+
+<div class="page-header">
+    <h2>User Management</h2>
+    <a asp-page="./Create" class="btn btn-primary">Add User</a>
+</div>
+
+<div class="page-content">
+    @if (Model.Users.Any())
+    {
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Last Login</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model.Users)
+                    {
+                        <tr>
+                            <td>@user.FullName</td>
+                            <td>
+                                <span class="badge @(user.Role == "Administrator" ? "badge-danger" : user.Role == "Owner" ? "badge-info" : "badge-success")">
+                                    @user.Role
+                                </span>
+                            </td>
+                            <td>
+                                @if (user.IsActive)
+                                {
+                                    <span class="badge badge-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-danger">Inactive</span>
+                                }
+                                @if (user.MustChangePassword)
+                                {
+                                    <span class="badge badge-warning ml-1">Password Change Required</span>
+                                }
+                            </td>
+                            <td>@user.CreatedAt.ToString("dd MMM yyyy")</td>
+                            <td>@(user.LastLoginAt?.ToString("dd MMM yyyy HH:mm") ?? "Never")</td>
+                            <td>
+                                <form asp-page="./ToggleStatus" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@user.Id" />
+                                    <button type="submit" class="btn btn-sm @(user.IsActive ? "btn-danger" : "btn-success")">
+                                        @(user.IsActive ? "Deactivate" : "Activate")
+                                    </button>
+                                </form>
+                                <form asp-page="./ResetPassword" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@user.Id" />
+                                    <button type="submit" class="btn btn-sm btn-warning" data-confirm="Reset password for @user.FullName to 'password123'?">
+                                        Reset Password
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted">No users found.</p>
+    }
+</div>

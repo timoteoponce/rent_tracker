@@ -1,0 +1,16 @@
+@page
+@model RentTracker.Web.Pages.Account.LogoutModel
+@{
+    ViewData["Title"] = "Logout";
+    Layout = "_LayoutAuth";
+}
+
+<div class="login-container">
+    <h1>Logout</h1>
+    <p class="subtitle">Are you sure you want to logout?</p>
+    
+    <form method="post" class="login-form">
+        <button type="submit" class="btn btn-primary btn-block">Logout</button>
+        <a asp-page="/Index" class="btn btn-secondary btn-block mt-2">Cancel</a>
+    </form>
+</div>

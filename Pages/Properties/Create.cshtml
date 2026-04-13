@@ -1,0 +1,111 @@
+@page
+@model RentTracker.Web.Pages.Properties.CreateModel
+@{
+    ViewData["Title"] = "Create Property";
+}
+
+<div class="page-header">
+    <h2>Create Property</h2>
+    <a asp-page="./Index" class="btn btn-secondary">Back to List</a>
+</div>
+
+<div class="page-content">
+    <form method="post" class="form-horizontal">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label asp-for="Property.Name"></label>
+                <input asp-for="Property.Name" class="form-control" />
+                <span asp-validation-for="Property.Name" class="text-danger"></span>
+            </div>
+            
+            <div class="form-group">
+                <label asp-for="Property.Location"></label>
+                <input asp-for="Property.Location" class="form-control" placeholder="Paste Google Maps link" />
+                <span asp-validation-for="Property.Location" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label asp-for="Property.SurfaceSquareMeters"></label>
+                <input asp-for="Property.SurfaceSquareMeters" type="number" step="0.01" class="form-control" />
+                <span asp-validation-for="Property.SurfaceSquareMeters" class="text-danger"></span>
+            </div>
+            
+            <div class="form-group">
+                <label asp-for="Property.NumberOfRooms"></label>
+                <input asp-for="Property.NumberOfRooms" type="number" class="form-control" />
+                <span asp-validation-for="Property.NumberOfRooms" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label asp-for="Property.CurrentPrice"></label>
+                <input asp-for="Property.CurrentPrice" type="number" step="0.01" class="form-control" />
+                <span asp-validation-for="Property.CurrentPrice" class="text-danger"></span>
+            </div>
+            
+            <div class="form-group">
+                <label asp-for="Property.CurrentWarranty"></label>
+                <input asp-for="Property.CurrentWarranty" type="number" step="0.01" class="form-control" />
+                <span asp-validation-for="Property.CurrentWarranty" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <h4>Facilities</h4>
+            <div class="form-row">
+                <div class="form-check">
+                    <input asp-for="Property.HasBathroom" type="checkbox" class="form-check-input" />
+                    <label asp-for="Property.HasBathroom" class="form-check-label"></label>
+                </div>
+                <div class="form-check">
+                    <input asp-for="Property.HasKitchen" type="checkbox" class="form-check-input" />
+                    <label asp-for="Property.HasKitchen" class="form-check-label"></label>
+                </div>
+                <div class="form-check">
+                    <input asp-for="Property.HasGarage" type="checkbox" class="form-check-input" />
+                    <label asp-for="Property.HasGarage" class="form-check-label"></label>
+                </div>
+                <div class="form-check">
+                    <input asp-for="Property.HasHotWater" type="checkbox" class="form-check-input" />
+                    <label asp-for="Property.HasHotWater" class="form-check-label"></label>
+                </div>
+                <div class="form-check">
+                    <input asp-for="Property.HasAirConditioning" type="checkbox" class="form-check-input" />
+                    <label asp-for="Property.HasAirConditioning" class="form-check-label"></label>
+                </div>
+                <div class="form-check">
+                    <input asp-for="Property.HasBackyard" type="checkbox" class="form-check-input" />
+                    <label asp-for="Property.HasBackyard" class="form-check-label"></label>
+                </div>
+                <div class="form-check">
+                    <input asp-for="Property.HasSecurity" type="checkbox" class="form-check-input" />
+                    <label asp-for="Property.HasSecurity" class="form-check-label"></label>
+                </div>
+                <div class="form-check">
+                    <input asp-for="Property.HasDoorbell" type="checkbox" class="form-check-input" />
+                    <label asp-for="Property.HasDoorbell" class="form-check-label"></label>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="form-check">
+                <input asp-for="Property.CanBeLeasedByUnits" type="checkbox" class="form-check-input" />
+                <label asp-for="Property.CanBeLeasedByUnits" class="form-check-label">Can be leased by units</label>
+            </div>
+        </div>
+
+        <div class="form-group mt-4">
+            <button type="submit" class="btn btn-primary">Create Property</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
