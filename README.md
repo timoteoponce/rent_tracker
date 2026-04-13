@@ -20,8 +20,8 @@ Web application that allows to register multiple rent locations to keep track of
 
 1. Create an account with some role, initial roles are System Administrator, Owner, Tennant
 2. Use the full-name as the account identity, validate uniqueness
-3. Add a property, the data required for a property must include: location (GPS), surface in meters, nr of rooms, facilities included (bathroom, kitchen, garage, hot water, AC, backyard, security, doorbell), price and warranty
-4. Update a property, here, the location can't change, the other data can be updated
+3. Add a property, the data required for a property must include: name, location (GPS), surface in meters, nr of rooms, facilities included (bathroom, kitchen, garage, hot water, AC, backyard, security, doorbell), price and warranty
+4. Update a property, all data can be updated including location (moving to a new address is allowed)
 5. Disable property, the property will not be removed, only will be usable when enabled again (data will be kept always)
 6. Enable property, (data will be kept always)
 7. Rent a property to a tenant
