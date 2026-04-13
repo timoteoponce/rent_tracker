@@ -1,0 +1,405 @@
+using System;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using RentTracker.Web.Data;
+
+#nullable disable
+
+namespace RentTracker.Web.Data.Migrations
+{
+    [DbContext(typeof(RentTrackerDbContext))]
+    [Migration("20260413000000_InitialCreate")]
+    partial class InitialCreate
+    {
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        {
+#pragma warning disable 612, 618
+            modelBuilder
+                .HasAnnotation("ProductVersion", "10.0.0")
+                .HasAnnotation("Relational:MaxIdentifierLength", 64);
+
+            modelBuilder.Entity("RentTracker.Web.Models.Lease", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("AgreedPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("AgreedWarranty")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("PropertyId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("PropertyUnitId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TerminationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PropertyId");
+
+                    b.HasIndex("PropertyUnitId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("Leases");
+                });
+
+            modelBuilder.Entity("RentTracker.Web.Models.Payment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("ForPeriod")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("LeaseId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("PaymentDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("PreviousPaymentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LeaseId");
+
+                    b.ToTable("Payments");
+                });
+
+            modelBuilder.Entity("RentTracker.Web.Models.Property", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("CanBeLeasedByUnits")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("CurrentPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("CurrentWarranty")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("HasAirConditioning")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("HasBackyard")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("HasBathroom")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("HasDoorbell")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("HasGarage")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("HasHotWater")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("HasKitchen")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("HasSecurity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("NumberOfRooms")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("OwnerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("SurfaceSquareMeters")
+                        .HasColumnType("REAL");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
+
+                    b.ToTable("Properties");
+                });
+
+            modelBuilder.Entity("RentTracker.Web.Models.PropertyPriceHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ChangeReason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("PropertyId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Warranty")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PropertyId");
+
+                    b.ToTable("PropertyPriceHistory");
+                });
+
+            modelBuilder.Entity("RentTracker.Web.Models.PropertyUnit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("PropertyId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Warranty")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PropertyId");
+
+                    b.ToTable("PropertyUnits");
+                });
+
+            modelBuilder.Entity("RentTracker.Web.Models.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("LastLoginAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FullName")
+                        .IsUnique();
+
+                    b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("RentTracker.Web.Models.Lease", b =>
+                {
+                    b.HasOne("RentTracker.Web.Models.Property", "Property")
+                        .WithMany("Leases")
+                        .HasForeignKey("PropertyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("RentTracker.Web.Models.PropertyUnit", "PropertyUnit")
+                        .WithMany("Leases")
+                        .HasForeignKey("PropertyUnitId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("RentTracker.Web.Models.User", "Tenant")
+                        .WithMany("Leases")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Property");
+
+                    b.Navigation("PropertyUnit");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("RentTracker.Web.Models.Payment", b =>
+                {
+                    b.HasOne("RentTracker.Web.Models.Lease", "Lease")
+                        .WithMany("Payments")
+                        .HasForeignKey("LeaseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lease");
+                });
+
+            modelBuilder.Entity("RentTracker.Web.Models.Property", b =>
+                {
+                    b.HasOne("RentTracker.Web.Models.User", "Owner")
+                        .WithMany("OwnedProperties")
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("RentTracker.Web.Models.PropertyPriceHistory", b =>
+                {
+                    b.HasOne("RentTracker.Web.Models.Property", "Property")
+                        .WithMany("PriceHistory")
+                        .HasForeignKey("PropertyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Property");
+                });
+
+            modelBuilder.Entity("RentTracker.Web.Models.PropertyUnit", b =>
+                {
+                    b.HasOne("RentTracker.Web.Models.Property", "Property")
+                        .WithMany("Units")
+                        .HasForeignKey("PropertyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Property");
+                });
+
+            modelBuilder.Entity("RentTracker.Web.Models.Lease", b =>
+                {
+                    b.Navigation("Payments");
+                });
+
+            modelBuilder.Entity("RentTracker.Web.Models.Property", b =>
+                {
+                    b.Navigation("Leases");
+
+                    b.Navigation("PriceHistory");
+
+                    b.Navigation("Units");
+                });
+
+            modelBuilder.Entity("RentTracker.Web.Models.PropertyUnit", b =>
+                {
+                    b.Navigation("Leases");
+                });
+
+            modelBuilder.Entity("RentTracker.Web.Models.User", b =>
+                {
+                    b.Navigation("Leases");
+
+                    b.Navigation("OwnedProperties");
+                });
+#pragma warning restore 612, 618
+        }
+    }
+}
