@@ -59,3 +59,107 @@ Web application that allows to register multiple rent locations to keep track of
 - Reports and stats must be real-time, preferably shown in a chart
 - Simplicity is a guideline, must be simple to read, write and maintain, set that guideline everywhere for the AI agents as well
 - The development environment will be vscode, create the setup files and tasks for that
+
+## Quick Start Guide
+
+### Prerequisites
+- [.NET 9 SDK](https://dotnet.microsoft.com/download) (or use `mise install`)
+- [Visual Studio Code](https://code.visualstudio.com/)
+- [Docker](https://www.docker.com/) (optional, for containerized deployment)
+
+### First Time Setup
+```bash
+# 1. Clone/navigate to the repository
+cd /Users/timoteo/projects/mine/rent_tracker
+
+# 2. Restore dependencies
+dotnet restore
+libman restore
+
+# 3. Build the project
+dotnet build
+
+# 4. Run the application
+dotnet run
+
+# 5. Open browser to:
+# http://localhost:5000
+# or the HTTPS URL shown in the console
+
+# 6. Login with default credentials:
+# Username: admin
+# Password: admin
+# (You will be forced to change password on first login)
+```
+
+### VS Code Development
+```bash
+# Open in VS Code
+code .
+
+# Use VS Code tasks (Ctrl+Shift+P → Tasks: Run Task):
+# - build: Build the project
+# - run: Run without debugging
+# - watch: Run with hot reload
+# - ef-migrations-add: Add database migration
+# - ef-database-update: Apply migrations
+```
+
+### Docker Deployment
+```bash
+# Build and run with Docker Compose
+docker-compose up -d
+
+# Access at http://localhost:8080
+# Database is persisted in ./data folder
+```
+
+### Default Credentials
+- **Admin**: `admin` / `admin` (must change on first login)
+- **New users** created by admin: `password123` (must change on first login)
+
+### Project Structure
+```
+RentTracker/                    # Project root (single project, no solution)
+├── RentTracker.csproj          # Project file
+├── Program.cs                  # Application entry point
+├── Pages/                      # Razor Pages (UI + Controllers)
+│   ├── Index.cshtml           # Dashboard
+│   ├── Properties/              # Property CRUD
+│   ├── Leases/                 # Lease management
+│   ├── Payments/               # Payment tracking
+│   ├── Reports/                # Charts and reports
+│   ├── Users/                  # User management (Admin only)
+│   └── Account/                # Login/logout
+├── Models/                     # Domain entities
+├── Data/                       # Database context & migrations
+├── wwwroot/                    # Static files (CSS, JS, images)
+└── .vscode/                    # VS Code configuration
+```
+
+### Key Technologies
+- **.NET 9 LTS** with Razor Pages (not MVC)
+- **SQLite** database (single file, zero maintenance)
+- **Entity Framework Core** (ORM - no raw SQL)
+- **Vanilla CSS** (no frameworks like Bootstrap)
+- **Chart.js** (via LibMan for charts)
+- **Simple cookie authentication** (not ASP.NET Identity)
+
+### Documentation
+- **[AGENTS.md](./AGENTS.md)** - Comprehensive development guide for AI agents and maintainers
+- **[mise.toml](./mise.toml)** - Tool version management and task definitions
+- **[.vscode/tasks.json](./.vscode/tasks.json)** - VS Code build tasks
+
+### AI-Assisted Development
+This project is designed for extensive AI assistance. See [AGENTS.md](./AGENTS.md) for:
+- How to add new features step-by-step
+- Code patterns and templates
+- Common pitfalls (especially SQLite limitations)
+- Dependency injection patterns
+- Service layer guidelines
+
+### Support & Maintenance
+- **.NET 9 LTS** supported until May 2026
+- **SQLite** supported until 2050
+- Upgrade to .NET 10 LTS planned for 2026
+- See [AGENTS.md](./AGENTS.md) for maintenance checklists
