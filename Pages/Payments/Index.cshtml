@@ -1,0 +1,71 @@
+@page
+@model RentTracker.Web.Pages.Payments.IndexModel
+@{
+    ViewData["Title"] = "Payments";
+}
+
+<div class="page-header">
+    <h2>Payments</h2>
+    <a asp-page="./Create" class="btn btn-primary">Add Payment</a>
+</div>
+
+<div class="page-content">
+    <div class="filters mb-3">
+        <form method="get" class="form-inline">
+            <label>Status:</label>
+            <select asp-for="StatusFilter" class="form-control" onchange="this.form.submit()">
+                <option value="">All</option>
+                <option value="Pending">Pending</option>
+                <option value="Received">Received</option>
+                <option value="Partial">Partial</option>
+                <option value="Late">Late</option>
+            </select>
+        </form>
+    </div>
+
+    @if (Model.Payments.Any())
+    {
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Property</th>
+                        <th>Tenant</th>
+                        <th>Period</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var payment in Model.Payments)
+                    {
+                        <tr>
+                            <td>@payment.Lease.Property.Name</td>
+                            <td>@payment.Lease.Tenant.FullName</td>
+                            <td>@payment.ForPeriod.ToString("MMM yyyy")</td>
+                            <td>Bs. @payment.Amount.ToString("N2") @payment.Currency</td>
+                            <td>@payment.PaymentDate.ToString("dd MMM yyyy")</td>
+                            <td>
+                                <span class="badge @(payment.Status == "Received" ? "badge-success" : payment.Status == "Pending" ? "badge-warning" : payment.Status == "Partial" ? "badge-info" : "badge-danger")">
+                                    @payment.Status
+                                </span>
+                            </td>
+                            <td>
+                                @if (User.IsInRole("Administrator") || User.IsInRole("Owner"))
+                                {
+                                    <a asp-page="./Edit" asp-route-id="@payment.Id" class="btn btn-sm btn-secondary">Update</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted">No payments found. <a asp-page="./Create">Add your first payment</a>.</p>
+    }
+</div>

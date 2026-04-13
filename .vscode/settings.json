@@ -1,0 +1,27 @@
+{
+  "dotnet.defaultSolution": "",
+  "omnisharp.enableRoslynAnalyzers": true,
+  "omnisharp.enableEditorConfigSupport": true,
+  "omnisharp.organizeImportsOnFormat": true,
+  "csharp.format.enable": true,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "ms-dotnettools.csharp",
+  "files.exclude": {
+    "**/bin": true,
+    "**/obj": true,
+    "**/wwwroot/lib": true,
+    "**/data": true
+  },
+  "search.exclude": {
+    "**/bin": true,
+    "**/obj": true,
+    "**/wwwroot/lib": true,
+    "**/data": true,
+    "**/Migrations": true
+  },
+  "razor.format.enable": true,
+  "razor.trace": "Off",
+  "emmet.includeLanguages": {
+    "razor": "html"
+  }
+}

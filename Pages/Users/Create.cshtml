@@ -1,0 +1,47 @@
+@page
+@model RentTracker.Web.Pages.Users.CreateModel
+@{
+    ViewData["Title"] = "Add User";
+}
+
+<div class="page-header">
+    <h2>Add User</h2>
+    <a asp-page="./Index" class="btn btn-secondary">Back to List</a>
+</div>
+
+<div class="page-content">
+    <form method="post" class="form-horizontal">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+        <div class="form-group">
+            <label asp-for="User.FullName"></label>
+            <input asp-for="User.FullName" class="form-control" placeholder="Enter full name (must be unique)" />
+            <span asp-validation-for="User.FullName" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="User.Role"></label>
+            <select asp-for="User.Role" class="form-control">
+                <option value="">-- Select Role --</option>
+                <option value="Owner">Owner</option>
+                <option value="Tenant">Tenant</option>
+            </select>
+            <span asp-validation-for="User.Role" class="text-danger"></span>
+            <small class="text-muted">Note: Only Administrators can create users</small>
+        </div>
+
+        <div class="form-group">
+            <label>Initial Password</label>
+            <input type="text" value="password123" class="form-control" readonly />
+            <small class="text-muted">User will be required to change this on first login</small>
+        </div>
+
+        <div class="form-group mt-4">
+            <button type="submit" class="btn btn-primary">Add User</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

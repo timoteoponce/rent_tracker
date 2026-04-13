@@ -1,0 +1,138 @@
+@page
+@model RentTracker.Web.Pages.Reports.IndexModel
+@{
+    ViewData["Title"] = "Reports";
+}
+
+<div class="page-header">
+    <h2>Reports Dashboard</h2>
+    <a asp-page="./Detailed" class="btn btn-secondary">Detailed Breakdown</a>
+</div>
+
+<div class="page-content">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <span class="stat-label">Total Properties</span>
+            <span class="stat-value">@Model.TotalProperties</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Occupied</span>
+            <span class="stat-value">@Model.OccupiedProperties</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Available</span>
+            <span class="stat-value">@Model.AvailableProperties</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Total Revenue (This Month)</span>
+            <span class="stat-value">Bs. @Model.ThisMonthRevenue.ToString("N0")</span>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Monthly Revenue (@Model.CurrentYear)</h3>
+            </div>
+            <div style="position: relative; height: 300px;">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Payment Status Distribution</h3>
+            </div>
+            <div style="position: relative; height: 300px;">
+                <canvas id="paymentStatusChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Property Status Overview</h3>
+        </div>
+        <div style="position: relative; height: 250px;">
+            <canvas id="propertyStatusChart"></canvas>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/chartjs/chart.umd.js"></script>
+    <script>
+        // Monthly Revenue Chart
+        var revenueCtx = document.getElementById('revenueChart').getContext('2d');
+        var revenueChart = new Chart(revenueCtx, {
+            type: 'bar',
+            data: {
+                labels: @Html.Raw(Json.Serialize(Model.MonthLabels)),
+                datasets: [{
+                    label: 'Revenue (BOB)',
+                    data: @Html.Raw(Json.Serialize(Model.MonthlyRevenue)),
+                    backgroundColor: 'rgba(37, 99, 235, 0.8)',
+                    borderColor: 'rgba(37, 99, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'Bs. ' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Payment Status Chart
+        var statusCtx = document.getElementById('paymentStatusChart').getContext('2d');
+        var statusChart = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: @Html.Raw(Json.Serialize(Model.PaymentStatusLabels)),
+                datasets: [{
+                    data: @Html.Raw(Json.Serialize(Model.PaymentStatusCounts)),
+                    backgroundColor: [
+                        'rgba(245, 158, 11, 0.8)',  // Pending - yellow
+                        'rgba(22, 163, 74, 0.8)',   // Received - green
+                        'rgba(37, 99, 235, 0.8)',   // Partial - blue
+                        'rgba(220, 38, 38, 0.8)'    // Late - red
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        // Property Status Chart
+        var propertyCtx = document.getElementById('propertyStatusChart').getContext('2d');
+        var propertyChart = new Chart(propertyCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Occupied', 'Available', 'Disabled'],
+                datasets: [{
+                    data: [@Model.OccupiedProperties, @Model.AvailableProperties, @Model.DisabledProperties],
+                    backgroundColor: [
+                        'rgba(22, 163, 74, 0.8)',   // Occupied - green
+                        'rgba(37, 99, 235, 0.8)',   // Available - blue
+                        'rgba(107, 114, 128, 0.8)'  // Disabled - gray
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    </script>
+}

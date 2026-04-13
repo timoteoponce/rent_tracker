@@ -195,6 +195,13 @@ PublishScripts/
 
 # LibMan restored libraries (self-hosted JS/CSS)
 wwwroot/lib/
+
+# SQLite database and data folder
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
 # NuGet v3's project.json files produces more ignorable files
 *.nuget.props
 *.nuget.targets

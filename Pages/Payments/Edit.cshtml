@@ -1,0 +1,126 @@
+@page "{id:guid}"
+@model RentTracker.Web.Pages.Payments.EditModel
+@{
+    ViewData["Title"] = "Update Payment";
+}
+
+<div class="page-header">
+    <h2>Update Payment</h2>
+    <a asp-page="./Index" class="btn btn-secondary">Back to List</a>
+</div>
+
+<div class="page-content">
+    <div class="alert alert-info">
+        <h4>⚠️ Creating New Payment Record</h4>
+        <p>
+            This will create a <strong>new payment record</strong> and preserve the original. 
+            This maintains a complete audit trail of all payment changes.
+        </p>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="card-title">Original Payment (Read-only)</h4>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Property</label>
+                <p class="form-control-static">@Model.OriginalPayment.Lease.Property.Name</p>
+            </div>
+            <div class="form-group">
+                <label>Tenant</label>
+                <p class="form-control-static">@Model.OriginalPayment.Lease.Tenant.FullName</p>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Period</label>
+                <p class="form-control-static">@Model.OriginalPayment.ForPeriod.ToString("MMM yyyy")</p>
+            </div>
+            <div class="form-group">
+                <label>Original Amount</label>
+                <p class="form-control-static">Bs. @Model.OriginalPayment.Amount.ToString("N2") @Model.OriginalPayment.Currency</p>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Original Status</label>
+                <p class="form-control-static">
+                    <span class="badge @(Model.OriginalPayment.Status == "Received" ? "badge-success" : Model.OriginalPayment.Status == "Pending" ? "badge-warning" : "badge-danger")">
+                        @Model.OriginalPayment.Status
+                    </span>
+                </p>
+            </div>
+            <div class="form-group">
+                <label>Original Date</label>
+                <p class="form-control-static">@Model.OriginalPayment.PaymentDate.ToString("dd MMM yyyy")</p>
+            </div>
+        </div>
+        @if (!string.IsNullOrEmpty(Model.OriginalPayment.Notes))
+        {
+            <div class="form-group">
+                <label>Original Notes</label>
+                <p class="form-control-static">@Model.OriginalPayment.Notes</p>
+            </div>
+        }
+    </div>
+
+    <h4>New Payment Details</h4>
+
+    <form method="post" class="form-horizontal">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+        <input type="hidden" asp-for="OriginalPaymentId" />
+
+        <div class="form-row">
+            <div class="form-group">
+                <label asp-for="Payment.Amount"></label>
+                <input asp-for="Payment.Amount" type="number" step="0.01" class="form-control" />
+                <span asp-validation-for="Payment.Amount" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Payment.Currency"></label>
+                <select asp-for="Payment.Currency" class="form-control">
+                    <option value="BOB">BOB (Bolivianos)</option>
+                    <option value="USD">USD (US Dollars)</option>
+                </select>
+                <span asp-validation-for="Payment.Currency" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label asp-for="Payment.Status"></label>
+                <select asp-for="Payment.Status" class="form-control">
+                    <option value="Pending">Pending</option>
+                    <option value="Received">Received</option>
+                    <option value="Partial">Partial</option>
+                    <option value="Late">Late</option>
+                </select>
+                <span asp-validation-for="Payment.Status" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Payment.PaymentDate"></label>
+                <input asp-for="Payment.PaymentDate" type="date" class="form-control" />
+                <span asp-validation-for="Payment.PaymentDate" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Payment.Notes"></label>
+            <textarea asp-for="Payment.Notes" class="form-control" rows="2" placeholder="Reason for update or additional notes"></textarea>
+            <span asp-validation-for="Payment.Notes" class="text-danger"></span>
+            <small class="text-muted">Include reason for this update (e.g., "Corrected amount", "Payment received late")</small>
+        </div>
+
+        <div class="form-group mt-4">
+            <button type="submit" class="btn btn-primary">Create Updated Payment Record</button>
+            <a asp-page="./Index" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

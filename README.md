@@ -33,11 +33,19 @@ Web application that allows to register multiple rent locations to keep track of
 13. The prices/costs can be stored in Bolivianos for the moment, but we must consider that in the future we would like to support USD as well
 14. Reports, we will need reports about the properties, the rentals, payments, etc. Something in real-time would be enough with some nice graphs
 15. There will be a default admin/admin user that will require a password change after first login, this user can set other users
+14. A property can be leased as a whole or in units perhaps, the front unit for a tennat, the back unit for a different tennat
+15. Perhaps use 'lease' instead of rent? check
+16. Ideally we would like the location to be pasted as a shared link from google maps, and rendered as open-in-map link to be opened in a new tab in google maps
 
 ## Technical specs
 
-- Use dotnet-mvc with the latest LTS supported platform
-- Use the standard stack, with the frontend I think the current approach is to write some sort of web assembly, check
+- Use dotnet latest release
+- Use mise for the tooling, everything must be restorable from the project folder
+- If additional js libs are needed, be sure to have them managed, nothing copy/pasted
+- All resources must be self-hosted, shouldn't download nor require anything from the internet
+- Use ORM tooling, native sql must be avoided if possible
+- There's no need for additional services, just the sqlite db
+- Use the standard stack, with the frontend no JS frameworks
 - The sqlite DB must be optimized with some pragmas, check
 - It's gonna be deployed as a docker image, the db and other uploaded files should be able to be mapped into a local folder
 - Must be design-responsive, will need to work on desktop, mobile and tablet
@@ -46,3 +54,8 @@ Web application that allows to register multiple rent locations to keep track of
 - Design the application for future changes, using migrations, good coding practices and keeping complexity controlled, the migrations must be automatically applied on startup
 - Consider that AIs will be used extensively in this project, define proper build guidelines, proper documentation and instructions for AI agents (AGENTS.md, copilot instructions, etc.)
 - The project will be hosted in GitHub and built with Github actions, there's no need to place it in a registry yet, the build must result in a docker image we can download and load
+- There must be a default admin user with admin/admin credentials, it can do everything
+- We can have Owners and Tennats, Owners can do pretty much everything but create users, Tennants can see pending payments and stats
+- Reports and stats must be real-time, preferably shown in a chart
+- Simplicity is a guideline, must be simple to read, write and maintain, set that guideline everywhere for the AI agents as well
+- The development environment will be vscode, create the setup files and tasks for that

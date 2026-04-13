@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  renttracker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: renttracker
+    ports:
+      - "8080:8080"
+    volumes:
+      # Persist SQLite database
+      - ./data:/app/data
+      # Optional: Mount custom appsettings
+      - ./appsettings.Production.json:/app/appsettings.Production.json:ro
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/renttracker.db;Foreign Keys=True;
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Use nginx as reverse proxy with SSL
+  # Uncomment if you need HTTPS in production
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: renttracker-nginx
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - renttracker
+  #   restart: unless-stopped
+
+volumes:
+  renttracker-data:
+    driver: local

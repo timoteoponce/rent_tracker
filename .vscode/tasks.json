@@ -1,0 +1,100 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "restore",
+      "command": "dotnet",
+      "type": "process",
+      "args": ["restore"],
+      "problemMatcher": []
+    },
+    {
+      "label": "restore-libman",
+      "command": "libman",
+      "type": "process",
+      "args": ["restore"],
+      "problemMatcher": []
+    },
+    {
+      "label": "run",
+      "command": "dotnet",
+      "type": "process",
+      "args": ["run"],
+      "problemMatcher": [],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "watch",
+      "command": "dotnet",
+      "type": "process",
+      "args": ["watch", "run"],
+      "problemMatcher": []
+    },
+    {
+      "label": "ef-migrations-add",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "ef",
+        "migrations",
+        "add",
+        "${input:migrationName}"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "ef-database-update",
+      "command": "dotnet",
+      "type": "process",
+      "args": ["ef", "database", "update"],
+      "problemMatcher": []
+    },
+    {
+      "label": "clean",
+      "command": "dotnet",
+      "type": "process",
+      "args": ["clean"],
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-build",
+      "type": "shell",
+      "command": "docker",
+      "args": ["build", "-t", "renttracker:latest", "."],
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-compose-up",
+      "type": "shell",
+      "command": "docker-compose",
+      "args": ["up", "-d"],
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "migrationName",
+      "description": "Migration Name",
+      "default": "MigrationDescription",
+      "type": "promptString"
+    }
+  ]
+}

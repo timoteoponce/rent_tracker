@@ -1,0 +1,100 @@
+@page
+@model RentTracker.Web.Pages.Leases.CreateModel
+@{
+    ViewData["Title"] = "Create Lease";
+}
+
+<div class="page-header">
+    <h2>Create Lease</h2>
+    <a asp-page="./Index" class="btn btn-secondary">Back to List</a>
+</div>
+
+<div class="page-content">
+    <form method="post" class="form-horizontal">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+        <div class="form-group">
+            <label asp-for="Lease.PropertyId"></label>
+            <select asp-for="Lease.PropertyId" asp-items="Model.AvailableProperties" class="form-control" id="propertySelect">
+                <option value="">-- Select Property --</option>
+            </select>
+            <span asp-validation-for="Lease.PropertyId" class="text-danger"></span>
+        </div>
+
+        <div class="form-group" id="unitSection" style="display: none;">
+            <label asp-for="Lease.PropertyUnitId"></label>
+            <select asp-for="Lease.PropertyUnitId" asp-items="Model.AvailableUnits" class="form-control" id="unitSelect">
+                <option value="">-- Whole Property --</option>
+            </select>
+            <span asp-validation-for="Lease.PropertyUnitId" class="text-danger"></span>
+            <small class="text-muted">Leave empty to lease the whole property</small>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Lease.TenantId"></label>
+            <select asp-for="Lease.TenantId" asp-items="Model.AvailableTenants" class="form-control">
+                <option value="">-- Select Tenant --</option>
+            </select>
+            <span asp-validation-for="Lease.TenantId" class="text-danger"></span>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label asp-for="Lease.AgreedPrice"></label>
+                <input asp-for="Lease.AgreedPrice" type="number" step="0.01" class="form-control" />
+                <span asp-validation-for="Lease.AgreedPrice" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Lease.AgreedWarranty"></label>
+                <input asp-for="Lease.AgreedWarranty" type="number" step="0.01" class="form-control" />
+                <span asp-validation-for="Lease.AgreedWarranty" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Lease.StartDate"></label>
+            <input asp-for="Lease.StartDate" type="date" class="form-control" />
+            <span asp-validation-for="Lease.StartDate" class="text-danger"></span>
+        </div>
+
+        <div class="form-group mt-4">
+            <button type="submit" class="btn btn-primary">Create Lease</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById('propertySelect').addEventListener('change', function() {
+            var propertyId = this.value;
+            var unitSection = document.getElementById('unitSection');
+            var unitSelect = document.getElementById('unitSelect');
+            
+            if (propertyId) {
+                // Fetch available units for this property
+                fetch('?handler=Units&propertyId=' + propertyId)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.canBeLeasedByUnits) {
+                            unitSection.style.display = 'block';
+                            // Update unit dropdown
+                            unitSelect.innerHTML = '<option value="">-- Whole Property --</option>';
+                            data.units.forEach(unit => {
+                                var option = document.createElement('option');
+                                option.value = unit.id;
+                                option.textContent = unit.name + ' (Bs. ' + unit.price.toFixed(2) + ')';
+                                unitSelect.appendChild(option);
+                            });
+                        } else {
+                            unitSection.style.display = 'none';
+                            unitSelect.value = '';
+                        }
+                    });
+            } else {
+                unitSection.style.display = 'none';
+            }
+        });
+    </script>
+}
