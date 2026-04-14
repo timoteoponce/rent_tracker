@@ -1,0 +1,75 @@
+@page "{id:guid}"
+@model RentTracker.Web.Pages.Users.EditModel
+@{
+    ViewData["Title"] = "Edit User";
+}
+
+<div class="page-header">
+    <h2>Edit User</h2>
+    <a asp-page="./Index" class="btn btn-secondary">Back to List</a>
+</div>
+
+<div class="page-content">
+    <form method="post" class="form-horizontal">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+        <div class="form-group">
+            <label asp-for="User.FullName"></label>
+            <input asp-for="User.FullName" class="form-control" />
+            <span asp-validation-for="User.FullName" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="User.Role"></label>
+            <select asp-for="User.Role" class="form-control">
+                <option value="">-- Select Role --</option>
+                <option value="Administrator">Administrator</option>
+                <option value="Owner">Owner</option>
+                <option value="Tenant">Tenant</option>
+            </select>
+            <span asp-validation-for="User.Role" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label>Status</label>
+            <div class="form-control-static">
+                @if (Model.User.IsActive)
+                {
+                    <span class="badge badge-success">Active</span>
+                }
+                else
+                {
+                    <span class="badge badge-danger">Inactive</span>
+                }
+                @if (Model.User.MustChangePassword)
+                {
+                    <span class="badge badge-warning ml-1">Password Change Required</span>
+                }
+            </div>
+            <small class="text-muted">Use the user list page to change status or reset password</small>
+        </div>
+
+        <div class="form-group">
+            <label>Created</label>
+            <div class="form-control-static">
+                @Model.User.CreatedAt.ToString("dd MMM yyyy HH:mm")
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Last Login</label>
+            <div class="form-control-static">
+                @(Model.User.LastLoginAt?.ToString("dd MMM yyyy HH:mm") ?? "Never")
+            </div>
+        </div>
+
+        <div class="form-group mt-4">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a asp-page="./Index" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

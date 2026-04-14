@@ -11,7 +11,10 @@
 
 <div class="page-content">
     <form method="post" class="form-horizontal">
-        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div asp-validation-summary="All" class="alert alert-danger"></div>
+        }
 
         <div class="form-group">
             <label asp-for="User.FullName"></label>
@@ -23,11 +26,12 @@
             <label asp-for="User.Role"></label>
             <select asp-for="User.Role" class="form-control">
                 <option value="">-- Select Role --</option>
+                <option value="Administrator">Administrator</option>
                 <option value="Owner">Owner</option>
                 <option value="Tenant">Tenant</option>
             </select>
             <span asp-validation-for="User.Role" class="text-danger"></span>
-            <small class="text-muted">Note: Only Administrators can create users</small>
+            <small class="text-muted">Select the appropriate role for the user</small>
         </div>
 
         <div class="form-group">

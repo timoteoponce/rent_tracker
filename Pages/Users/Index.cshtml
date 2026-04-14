@@ -51,6 +51,7 @@
                             <td>@user.CreatedAt.ToString("dd MMM yyyy")</td>
                             <td>@(user.LastLoginAt?.ToString("dd MMM yyyy HH:mm") ?? "Never")</td>
                             <td>
+                                <a asp-page="./Edit" asp-route-id="@user.Id" class="btn btn-sm btn-secondary">Edit</a>
                                 <form asp-page="./ToggleStatus" method="post" class="d-inline">
                                     <input type="hidden" name="id" value="@user.Id" />
                                     <button type="submit" class="btn btn-sm @(user.IsActive ? "btn-danger" : "btn-success")">
@@ -60,7 +61,7 @@
                                 <form asp-page="./ResetPassword" method="post" class="d-inline">
                                     <input type="hidden" name="id" value="@user.Id" />
                                     <button type="submit" class="btn btn-sm btn-warning" data-confirm="Reset password for @user.FullName to 'password123'?">
-                                        Reset Password
+                                        Reset
                                     </button>
                                 </form>
                             </td>

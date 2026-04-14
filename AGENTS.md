@@ -401,6 +401,23 @@ var payments = allPayments
     .ToList();
 ```
 
+### "The LINQ expression could not be translated. DateTimeOffset comparison" error
+SQLite doesn't support comparing DateTimeOffset values directly in WHERE clauses (e.g., `>=`, `<=`, `==`).
+**Solution:** Use `.AsEnumerable()` to force client-side evaluation before filtering:
+```csharp
+// BAD - will throw exception:
+var payments = await _context.Payments
+    .Where(p => p.ForPeriod >= startDate && p.ForPeriod <= endDate)
+    .ToListAsync();
+
+// GOOD - fetch then filter in memory:
+var payments = _context.Payments
+    .Include(p => p.Lease)
+    .AsEnumerable()  // Switch to client-side before DateTimeOffset comparison
+    .Where(p => p.ForPeriod >= startDate && p.ForPeriod <= endDate)
+    .ToList();
+```
+
 ## Important Decisions Log
 
 | Date | Decision | Reason |
@@ -974,6 +991,10 @@ public async Task<IActionResult> OnGetAsync()
 **Error: "Cannot use 'DateTimeOffset.Year' in WHERE"**
 - Cause: Using `.Where(p => p.Date.Year == 2024)`
 - Fix: Fetch all, then filter in memory
+
+**Error: "The LINQ expression could not be translated. DateTimeOffset comparison"**
+- Cause: Using `.Where(p => p.Date >= startDate && p.Date <= endDate)` with DateTimeOffset
+- Fix: Use `.AsEnumerable()` before the comparison to force client-side evaluation
 
 **Error: "The LINQ expression could not be translated"**
 - Cause: Using complex LINQ that SQLite doesn't support
