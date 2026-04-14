@@ -27,6 +27,9 @@ public class CreateModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        // Remove PasswordHash validation error - we set it programmatically
+        ModelState.Remove("User.PasswordHash");
+        
         if (!ModelState.IsValid)
         {
             return Page();

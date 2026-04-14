@@ -196,8 +196,11 @@ PublishScripts/
 # LibMan restored libraries (self-hosted JS/CSS)
 wwwroot/lib/
 
-# SQLite database and data folder
-data/
+# SQLite database files (in Data folder and root)
+Data/*.db
+Data/*.db-journal
+Data/*.db-wal
+Data/*.db-shm
 *.db
 *.db-journal
 *.db-wal

@@ -35,12 +35,16 @@ public class CreateModel : PageModel
 
         // Set defaults
         Payment.PaymentDate = DateTimeOffset.UtcNow;
+        Payment.ForPeriod = new DateTimeOffset(DateTimeOffset.UtcNow.Year, DateTimeOffset.UtcNow.Month, 1, 0, 0, 0, TimeSpan.Zero);
         Payment.Currency = "BOB";
         Payment.Status = PaymentStatus.Pending;
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
+        // Remove validation for navigation properties - only FK IDs are submitted from form
+        ModelState.Remove("Payment.Lease");
+        
         if (!ModelState.IsValid)
         {
             await LoadSelectListsAsync();
@@ -89,5 +93,18 @@ public class CreateModel : PageModel
         }).ToList();
 
         ActiveLeases = new SelectList(leaseList, "Id", "DisplayText");
+    }
+
+    public async Task<IActionResult> OnGetLeaseDetailsAsync(Guid leaseId)
+    {
+        var lease = await _context.Leases
+            .FirstOrDefaultAsync(l => l.Id == leaseId && l.Status == LeaseStatus.Active);
+
+        if (lease == null)
+        {
+            return new JsonResult(new { agreedPrice = (decimal)0 });
+        }
+
+        return new JsonResult(new { agreedPrice = lease.AgreedPrice });
     }
 }

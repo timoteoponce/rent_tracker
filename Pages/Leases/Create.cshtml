@@ -11,7 +11,10 @@
 
 <div class="page-content">
     <form method="post" class="form-horizontal">
-        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div asp-validation-summary="All" class="alert alert-danger"></div>
+        }
 
         <div class="form-group">
             <label asp-for="Lease.PropertyId"></label>
@@ -41,13 +44,13 @@
         <div class="form-row">
             <div class="form-group">
                 <label asp-for="Lease.AgreedPrice"></label>
-                <input asp-for="Lease.AgreedPrice" type="number" step="0.01" class="form-control" />
+                <input asp-for="Lease.AgreedPrice" type="number" step="0.01" class="form-control" id="agreedPrice" />
                 <span asp-validation-for="Lease.AgreedPrice" class="text-danger"></span>
             </div>
 
             <div class="form-group">
                 <label asp-for="Lease.AgreedWarranty"></label>
-                <input asp-for="Lease.AgreedWarranty" type="number" step="0.01" class="form-control" />
+                <input asp-for="Lease.AgreedWarranty" type="number" step="0.01" class="form-control" id="agreedWarranty" />
                 <span asp-validation-for="Lease.AgreedWarranty" class="text-danger"></span>
             </div>
         </div>
@@ -71,6 +74,8 @@
             var propertyId = this.value;
             var unitSection = document.getElementById('unitSection');
             var unitSelect = document.getElementById('unitSelect');
+            var agreedPriceInput = document.getElementById('agreedPrice');
+            var agreedWarrantyInput = document.getElementById('agreedWarranty');
             
             if (propertyId) {
                 // Fetch available units for this property
@@ -91,9 +96,30 @@
                             unitSection.style.display = 'none';
                             unitSelect.value = '';
                         }
+                        
+                        // Populate default price and warranty from property
+                        agreedPriceInput.value = data.defaultPrice.toFixed(2);
+                        agreedWarrantyInput.value = data.defaultWarranty.toFixed(2);
                     });
             } else {
                 unitSection.style.display = 'none';
+                agreedPriceInput.value = '';
+                agreedWarrantyInput.value = '';
+            }
+        });
+        
+        // Handle unit selection to update price
+        document.getElementById('unitSelect').addEventListener('change', function() {
+            var unitId = this.value;
+            var agreedPriceInput = document.getElementById('agreedPrice');
+            
+            if (unitId) {
+                // Find the selected unit's price from the dropdown options
+                var selectedOption = this.options[this.selectedIndex];
+                var priceMatch = selectedOption.textContent.match(/Bs\.\s+([\d,.]+)/);
+                if (priceMatch) {
+                    agreedPriceInput.value = parseFloat(priceMatch[1].replace(',', '')).toFixed(2);
+                }
             }
         });
     </script>

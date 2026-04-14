@@ -28,10 +28,17 @@ public class CreateModel : PageModel
     public async Task OnGetAsync()
     {
         await LoadSelectListsAsync();
+        
+        // Set default start date to today
+        Lease.StartDate = DateTimeOffset.UtcNow;
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
+        // Remove validation for navigation properties - only FK IDs are submitted from form
+        ModelState.Remove("Lease.Property");
+        ModelState.Remove("Lease.Tenant");
+        
         if (!ModelState.IsValid)
         {
             await LoadSelectListsAsync();
@@ -144,14 +151,24 @@ public class CreateModel : PageModel
 
         if (property == null)
         {
-            return new JsonResult(new { canBeLeasedByUnits = false, units = new List<object>() });
+            return new JsonResult(new { 
+                canBeLeasedByUnits = false, 
+                units = new List<object>(),
+                defaultPrice = (decimal)0,
+                defaultWarranty = (decimal)0
+            });
         }
 
         var units = property.CanBeLeasedByUnits 
             ? property.Units.Where(u => u.IsAvailable).Select(u => new { id = u.Id, name = u.Name, price = u.Price }).Cast<object>().ToList()
             : new List<object>();
 
-        return new JsonResult(new { canBeLeasedByUnits = property.CanBeLeasedByUnits, units });
+        return new JsonResult(new { 
+            canBeLeasedByUnits = property.CanBeLeasedByUnits, 
+            units,
+            defaultPrice = property.CurrentPrice,
+            defaultWarranty = property.CurrentWarranty
+        });
     }
 
     private async Task LoadSelectListsAsync()

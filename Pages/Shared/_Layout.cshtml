@@ -23,6 +23,10 @@
                     {
                         <a asp-page="/Reports/Index">Reports</a>
                     }
+                    @if (User.IsInRole(UserRoles.Administrator))
+                    {
+                        <a asp-page="/Users/Index">Users</a>
+                    }
                 }
             </nav>
             <div class="header-actions">

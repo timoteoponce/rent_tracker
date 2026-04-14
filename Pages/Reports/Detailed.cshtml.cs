@@ -57,18 +57,22 @@ public class DetailedModel : PageModel
             .ToListAsync();
         Properties = new SelectList(properties, "Id", "Name");
 
-        // Get filtered payments
+        // Get all payments with related data first (SQLite DateTimeOffset workaround)
+        // Cannot use DateTimeOffset comparisons in WHERE clause with SQLite
         var paymentsQuery = _context.Payments
             .Include(p => p.Lease)
             .ThenInclude(l => l.Property)
-            .Where(p => p.ForPeriod >= StartDate && p.ForPeriod <= EndDate);
+            .AsEnumerable();  // Switch to client-side evaluation
 
         if (PropertyId.HasValue)
         {
             paymentsQuery = paymentsQuery.Where(p => p.Lease.PropertyId == PropertyId.Value);
         }
 
-        var payments = await paymentsQuery.ToListAsync();
+        // Filter by date range in memory (SQLite doesn't support DateTimeOffset comparisons in SQL)
+        var payments = paymentsQuery
+            .Where(p => p.ForPeriod >= StartDate && p.ForPeriod <= EndDate)
+            .ToList();
 
         // Calculate summary stats
         TotalPayments = payments.Count;
