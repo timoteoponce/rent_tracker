@@ -61,61 +61,31 @@ jobs:
           scp /tmp/image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/
 
       - name: Deploy to server
-        env:
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          DATA_DIR: ${{ env.DATA_DIR }}
-          CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
-          IMAGE_NAME: ${{ env.IMAGE_NAME }}
-          HOST_PORT: ${{ env.HOST_PORT }}
-          CONTAINER_PORT: ${{ env.CONTAINER_PORT }}
         run: |
-          ssh $SSH_USER@$SSH_HOST /bin/bash << 'REMOTE_EOF'
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} /bin/bash << 'SCRIPT'
             set -e
-
-            mkdir -p "$DATA_DIR"
-
-            if [ -f "$DATA_DIR/renttracker.db" ]; then
-              echo "Creating database backup..."
-              cp "$DATA_DIR/renttracker.db" "$DATA_DIR/backup-$(date +%s).db"
-              ls -t "$DATA_DIR"/backup-*.db 2>/dev/null | tail -n +4 | xargs rm -f 2>/dev/null || true
-              echo "Backup created. Keeping last 3 backups."
+            mkdir -p ~/rent-tracker
+            if [ -f ~/rent-tracker/renttracker.db ]; then
+              cp ~/rent-tracker/renttracker.db ~/rent-tracker/backup-$(date +%s).db
+              ls -t ~/rent-tracker/backup-*.db 2>/dev/null | tail -n +4 | xargs rm -f 2>/dev/null || true
             fi
-
-            echo "Loading Docker image..."
             docker load < /tmp/image.tar
-
-            echo "Stopping existing container..."
-            docker stop "$CONTAINER_NAME" 2>/dev/null || true
-            docker rm "$CONTAINER_NAME" 2>/dev/null || true
-
-            echo "Starting new container..."
-            docker run -d \
-              --name "$CONTAINER_NAME" \
-              --restart unless-stopped \
-              -p "127.0.0.1:$HOST_PORT:$CONTAINER_PORT" \
-              -v "$DATA_DIR:/app/data" \
-              -e ASPNETCORE_ENVIRONMENT=Production \
-              -e ConnectionStrings__DefaultConnection="Data Source=/app/data/renttracker.db;Foreign Keys=True;" \
-              -e ASPNETCORE_URLS=http://+:8080 \
-              "$IMAGE_NAME:latest"
-
-            echo "Waiting for health check..."
+            docker stop renttracker 2>/dev/null || true
+            docker rm renttracker 2>/dev/null || true
+            docker run -d --name renttracker --restart unless-stopped -p 127.0.0.1:9919:8080 -v ~/rent-tracker:/app/data -e ASPNETCORE_ENVIRONMENT=Production -e ConnectionStrings__DefaultConnection="Data Source=/app/data/renttracker.db;Foreign Keys=True;" -e ASPNETCORE_URLS=http://+:8080 renttracker:latest
             sleep 5
             for i in 1 2 3 4 5; do
-              if wget -q -O /dev/null "http://localhost:$CONTAINER_PORT/health" 2>/dev/null; then
-                echo "✓ Deployment successful - container is healthy"
+              if wget -q -O /dev/null http://localhost:8080/health 2>/dev/null; then
+                echo "✓ Deployed successfully"
                 docker system prune -f
                 exit 0
               fi
-              echo "  Attempt $i/5..."
               sleep 5
             done
-
-            echo "✗ Health check failed after 30 seconds"
-            docker logs "$CONTAINER_NAME" --tail 20 || true
+            echo "✗ Health check failed"
+            docker logs renttracker --tail 20 || true
             exit 1
-          REMOTE_EOF
+          SCRIPT
 
       - name: Cleanup
         run: rm -f /tmp/image.tar ${{ env.IMAGE_NAME }}.tar.gz
