@@ -1,0 +1,148 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  HOST_PORT: 9919
+  CONTAINER_PORT: 8080
+  DATA_DIR: ~/rent-tracker
+  CONTAINER_NAME: renttracker
+  IMAGE_NAME: renttracker
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Install LibMan
+        run: dotnet tool install -g Microsoft.Web.LibraryManager.Cli
+
+      - name: Restore LibMan libraries
+        run: |
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          libman restore
+
+      - name: Publish
+        run: dotnet publish --no-build --configuration Release --output ./publish
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.IMAGE_NAME }}:latest .
+
+      - name: Save Docker image
+        run: docker save ${{ env.IMAGE_NAME }}:latest | gzip > ${{ env.IMAGE_NAME }}.tar.gz
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: ${{ env.IMAGE_NAME }}.tar.gz
+          retention-days: 7
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          log-public-key: false
+
+      - name: Add host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Copy image to server
+        run: |
+          gunzip -c ${{ env.IMAGE_NAME }}.tar.gz > /tmp/image.tar
+          scp /tmp/image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/
+
+      - name: Deploy to server
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'REMOTE_EOF'
+            set -e
+
+            # Create data directory if it doesn't exist
+            mkdir -p ${{ env.DATA_DIR }}
+
+            # Backup database (keep last 3)
+            if [ -f ${{ env.DATA_DIR }}/renttracker.db ]; then
+              echo "Creating database backup..."
+              cp ${{ env.DATA_DIR }}/renttracker.db ${{ env.DATA_DIR }}/backup-$(date +%s).db
+              ls -t ${{ env.DATA_DIR }}/backup-*.db 2>/dev/null | tail -n +4 | xargs rm -f 2>/dev/null || true
+              echo "Backup created. Keeping last 3 backups."
+            fi
+
+            # Load and deploy new image
+            echo "Loading Docker image..."
+            docker load < /tmp/image.tar
+
+            echo "Stopping existing container..."
+            docker stop ${{ env.CONTAINER_NAME }} 2>/dev/null || true
+            docker rm ${{ env.CONTAINER_NAME }} 2>/dev/null || true
+
+            echo "Starting new container..."
+            docker run -d \
+              --name ${{ env.CONTAINER_NAME }} \
+              --restart unless-stopped \
+              -p 127.0.0.1:${{ env.HOST_PORT }}:${{ env.CONTAINER_PORT }} \
+              -v ${{ env.DATA_DIR }}:/app/data \
+              -e ASPNETCORE_ENVIRONMENT=Production \
+              -e ConnectionStrings__DefaultConnection="Data Source=/app/data/renttracker.db;Foreign Keys=True;" \
+              -e ASPNETCORE_URLS=http://+:8080 \
+              ${{ env.IMAGE_NAME }}:latest
+
+            # Health check (30s max)
+            echo "Waiting for health check..."
+            sleep 5
+            for i in {1..5}; do
+              if wget -q -O /dev/null http://localhost:${{ env.CONTAINER_PORT }}/health 2>/dev/null; then
+                echo "✓ Deployment successful - container is healthy"
+                docker system prune -f
+                exit 0
+              fi
+              echo "  Attempt $i/5..."
+              sleep 5
+            done
+
+            echo "✗ Health check failed after 30 seconds"
+            docker logs ${{ env.CONTAINER_NAME }} --tail 20 || true
+            exit 1
+          REMOTE_EOF
+
+      - name: Cleanup
+        run: rm -f /tmp/image.tar ${{ env.IMAGE_NAME }}.tar.gz
