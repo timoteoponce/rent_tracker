@@ -6,7 +6,6 @@ on:
   workflow_dispatch:
 
 env:
-  DOTNET_VERSION: '9.0.x'
   HOST_PORT: 9919
   CONTAINER_PORT: 8080
   DATA_DIR: ~/rent-tracker
@@ -14,36 +13,8 @@ env:
   IMAGE_NAME: renttracker
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Restore dependencies
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
-
-      - name: Install LibMan
-        run: dotnet tool install -g Microsoft.Web.LibraryManager.Cli
-
-      - name: Restore LibMan libraries
-        run: |
-          export PATH="$PATH:$HOME/.dotnet/tools"
-          libman restore
-
-      - name: Publish
-        run: dotnet publish --no-build --configuration Release --output ./publish
-
   docker:
     runs-on: ubuntu-latest
-    needs: build
     steps:
       - uses: actions/checkout@v4
 
@@ -51,8 +22,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image
-        run: |
-          docker build -t ${{ env.IMAGE_NAME }}:latest .
+        run: docker build -t ${{ env.IMAGE_NAME }}:latest .
 
       - name: Save Docker image
         run: docker save ${{ env.IMAGE_NAME }}:latest | gzip > ${{ env.IMAGE_NAME }}.tar.gz
@@ -68,7 +38,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: docker
     if: github.ref == 'refs/heads/main'
-
     steps:
       - name: Download Docker image artifact
         uses: actions/download-artifact@v4
@@ -104,10 +73,8 @@ jobs:
           ssh $SSH_USER@$SSH_HOST << 'REMOTE_EOF'
             set -e
 
-            # Create data directory if it doesn't exist
             mkdir -p $DATA_DIR
 
-            # Backup database (keep last 3)
             if [ -f $DATA_DIR/renttracker.db ]; then
               echo "Creating database backup..."
               cp $DATA_DIR/renttracker.db $DATA_DIR/backup-$(date +%s).db
@@ -115,7 +82,6 @@ jobs:
               echo "Backup created. Keeping last 3 backups."
             fi
 
-            # Load and deploy new image
             echo "Loading Docker image..."
             docker load < /tmp/image.tar
 
@@ -134,7 +100,6 @@ jobs:
               -e ASPNETCORE_URLS=http://+:8080 \
               $IMAGE_NAME:latest
 
-            # Health check (30s max)
             echo "Waiting for health check..."
             sleep 5
             for i in {1..5}; do
