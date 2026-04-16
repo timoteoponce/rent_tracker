@@ -68,6 +68,9 @@ public class Program
             
             // Seed default admin user if not exists
             await SeedDefaultAdminAsync(dbContext);
+
+            // Migrate existing users to have username and email
+            await MigrateExistingUsersAsync(dbContext);
         }
 
         if (!app.Environment.IsDevelopment())
@@ -92,9 +95,9 @@ public class Program
 
     private static async Task SeedDefaultAdminAsync(RentTrackerDbContext context)
     {
-        // Check if admin user exists
+        // Check if admin user exists by username
         var adminExists = await context.Users
-            .AnyAsync(u => u.FullName == "admin" && u.Role == UserRoles.Administrator);
+            .AnyAsync(u => u.Username == "admin" && u.Role == UserRoles.Administrator);
 
         if (!adminExists)
         {
@@ -102,15 +105,52 @@ public class Program
             // This user MUST change password on first login
             var admin = new User
             {
-                FullName = "admin",
+                Username = "admin",
+                Email = "admin@fakemail.ch",
+                FullName = "Administrator",
                 Role = UserRoles.Administrator,
                 PasswordHash = HashPassword("admin"),
                 MustChangePassword = true,
                 IsActive = true,
+                IsSystemUser = true,
                 CreatedAt = DateTimeOffset.UtcNow
             };
 
             context.Users.Add(admin);
+            await context.SaveChangesAsync();
+        }
+    }
+
+    private static async Task MigrateExistingUsersAsync(RentTrackerDbContext context)
+    {
+        // Find users that need migration (missing username)
+        var usersNeedingMigration = await context.Users
+            .Where(u => string.IsNullOrEmpty(u.Username))
+            .ToListAsync();
+
+        foreach (var user in usersNeedingMigration)
+        {
+            var random = Guid.NewGuid().ToString("N")[..8];
+
+            // Check if this looks like an admin user
+            if (user.FullName == "admin" && user.Role == UserRoles.Administrator)
+            {
+                // This is the admin - set as system user
+                user.Username = "admin";
+                user.Email = "admin@fakemail.ch";
+                user.FullName = "Administrator";
+                user.IsSystemUser = true;
+            }
+            else
+            {
+                // Regular user - assign random values
+                user.Username = $"user-{random}";
+                user.Email = $"user-{random}@fakemail.ch";
+            }
+        }
+
+        if (usersNeedingMigration.Any())
+        {
             await context.SaveChangesAsync();
         }
     }

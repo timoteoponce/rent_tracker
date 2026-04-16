@@ -1,0 +1,86 @@
+@page
+@model RentTracker.Web.Pages.Account.ProfileModel
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+<div class="page-header">
+    <h2>My Profile</h2>
+    <a asp-page="./ChangePassword" class="btn btn-secondary">Change Password</a>
+</div>
+
+<div class="page-content">
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="alert alert-success">@Model.SuccessMessage</div>
+    }
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger">@Model.ErrorMessage</div>
+    }
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <form method="post" class="form-horizontal">
+        <div class="form-group">
+            <label asp-for="Input.Username"></label>
+            <input asp-for="Input.Username" class="form-control" readonly="@(Model.CurrentUser.Username == "admin" ? "readonly" : null)" />
+            <span asp-validation-for="Input.Username" class="text-danger"></span>
+            @if (Model.CurrentUser.Username == "admin")
+            {
+                <small class="text-muted">System administrator username cannot be changed</small>
+            }
+            else
+            {
+                <small class="text-muted">Must be unique across all users</small>
+            }
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Input.Email"></label>
+            <input asp-for="Input.Email" class="form-control" />
+            <span asp-validation-for="Input.Email" class="text-danger"></span>
+            <small class="text-muted">Must be unique across all users</small>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Input.FullName"></label>
+            <input asp-for="Input.FullName" class="form-control" placeholder="Display name (optional)" />
+            <span asp-validation-for="Input.FullName" class="text-danger"></span>
+            <small class="text-muted">Optional display name</small>
+        </div>
+
+        <div class="form-group">
+            <label>Role</label>
+            <div class="form-control-static">
+                <span class="badge @(Model.CurrentUser.Role == "Administrator" ? "badge-danger" : Model.CurrentUser.Role == "Owner" ? "badge-info" : "badge-success")">
+                    @Model.CurrentUser.Role
+                </span>
+            </div>
+            <small class="text-muted">Role can only be changed by an administrator</small>
+        </div>
+
+        <div class="form-group">
+            <label>Created</label>
+            <div class="form-control-static">
+                @Model.CurrentUser.CreatedAt.ToString("dd MMM yyyy HH:mm")
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Last Login</label>
+            <div class="form-control-static">
+                @(Model.CurrentUser.LastLoginAt?.ToString("dd MMM yyyy HH:mm") ?? "Never")
+            </div>
+        </div>
+
+        <div class="form-group mt-4">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a asp-page="/Index" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

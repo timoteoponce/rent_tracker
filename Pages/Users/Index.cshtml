@@ -16,7 +16,9 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Name</th>
+                        <th>Username</th>
+                        <th>Full Name</th>
+                        <th>Email</th>
                         <th>Role</th>
                         <th>Status</th>
                         <th>Created</th>
@@ -28,7 +30,9 @@
                     @foreach (var user in Model.Users)
                     {
                         <tr>
+                            <td>@user.Username</td>
                             <td>@user.FullName</td>
+                            <td>@user.Email</td>
                             <td>
                                 <span class="badge @(user.Role == "Administrator" ? "badge-danger" : user.Role == "Owner" ? "badge-info" : "badge-success")">
                                     @user.Role
@@ -52,15 +56,18 @@
                             <td>@(user.LastLoginAt?.ToString("dd MMM yyyy HH:mm") ?? "Never")</td>
                             <td>
                                 <a asp-page="./Edit" asp-route-id="@user.Id" class="btn btn-sm btn-secondary">Edit</a>
-                                <form asp-page="./ToggleStatus" method="post" class="d-inline">
-                                    <input type="hidden" name="id" value="@user.Id" />
-                                    <button type="submit" class="btn btn-sm @(user.IsActive ? "btn-danger" : "btn-success")">
-                                        @(user.IsActive ? "Deactivate" : "Activate")
-                                    </button>
-                                </form>
+                                @if (!user.IsSystemUser && user.Username != "admin")
+                                {
+                                    <form asp-page="./ToggleStatus" method="post" class="d-inline">
+                                        <input type="hidden" name="id" value="@user.Id" />
+                                        <button type="submit" class="btn btn-sm @(user.IsActive ? "btn-danger" : "btn-success")">
+                                            @(user.IsActive ? "Deactivate" : "Activate")
+                                        </button>
+                                    </form>
+                                }
                                 <form asp-page="./ResetPassword" method="post" class="d-inline">
                                     <input type="hidden" name="id" value="@user.Id" />
-                                    <button type="submit" class="btn btn-sm btn-warning" data-confirm="Reset password for @user.FullName to 'password123'?">
+                                    <button type="submit" class="btn btn-sm btn-warning" data-confirm="Reset password for @user.Username to 'password123'?">
                                         Reset
                                     </button>
                                 </form>

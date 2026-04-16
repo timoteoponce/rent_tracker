@@ -11,6 +11,14 @@ public class User
     public Guid Id { get; set; } = Guid.NewGuid();
 
     [Required]
+    [StringLength(50)]
+    public string Username { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(200)]
+    [EmailAddress]
+    public string Email { get; set; } = string.Empty;
+
     [StringLength(100)]
     public string FullName { get; set; } = string.Empty;
 
@@ -24,6 +32,8 @@ public class User
     public bool MustChangePassword { get; set; } = false;
 
     public bool IsActive { get; set; } = true;
+
+    public bool IsSystemUser { get; set; } = false;
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 

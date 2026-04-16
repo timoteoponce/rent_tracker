@@ -35,13 +35,38 @@ public class CreateModel : PageModel
             return Page();
         }
 
-        // Check for duplicate full name
-        var existingUser = await _context.Users
-            .FirstOrDefaultAsync(u => u.FullName == User.FullName);
-
-        if (existingUser != null)
+        // Generate random values if not provided
+        if (string.IsNullOrWhiteSpace(User.Username))
         {
-            ModelState.AddModelError("User.FullName", "A user with this name already exists.");
+            var random = Guid.NewGuid().ToString("N")[..8];
+            User.Username = $"user-{random}";
+        }
+
+        if (string.IsNullOrWhiteSpace(User.Email))
+        {
+            var random = Guid.NewGuid().ToString("N")[..8];
+            User.Email = $"user-{random}@fakemail.ch";
+        }
+
+        // Check for duplicate username (client-side fetch first due to DateTimeOffset limitations in SQLite)
+        var allUsers = await _context.Users.ToListAsync();
+        
+        if (allUsers.Any(u => u.Username.Equals(User.Username, StringComparison.OrdinalIgnoreCase)))
+        {
+            ModelState.AddModelError("User.Username", "This username is already taken.");
+            return Page();
+        }
+
+        if (allUsers.Any(u => u.Email.Equals(User.Email, StringComparison.OrdinalIgnoreCase)))
+        {
+            ModelState.AddModelError("User.Email", "This email is already in use.");
+            return Page();
+        }
+
+        // Prevent creating another user with username 'admin'
+        if (User.Username.Equals("admin", StringComparison.OrdinalIgnoreCase))
+        {
+            ModelState.AddModelError("User.Username", "The username 'admin' is reserved for the system administrator.");
             return Page();
         }
 
