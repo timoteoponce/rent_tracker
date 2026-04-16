@@ -27,9 +27,9 @@ public class LoginModel : PageModel
 
     public class InputModel
     {
-        [Required(ErrorMessage = "Full name is required")]
-        [StringLength(100)]
-        public string FullName { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Username or email is required")]
+        [Display(Name = "Username or Email")]
+        public string LoginIdentifier { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Password is required")]
         [DataType(DataType.Password)]
@@ -53,9 +53,10 @@ public class LoginModel : PageModel
             return Page();
         }
 
-        // Find user by full name
-        var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.FullName == Input.FullName && u.IsActive);
+        // Find user by username or email
+        var allUsers = await _context.Users.ToListAsync();
+        var user = allUsers
+            .FirstOrDefault(u => (u.Username == Input.LoginIdentifier || u.Email == Input.LoginIdentifier) && u.IsActive);
 
         if (user == null)
         {
@@ -82,7 +83,7 @@ public class LoginModel : PageModel
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Name, user.FullName),
+            new(ClaimTypes.Name, user.Username),
             new(ClaimTypes.Role, user.Role)
         };
 

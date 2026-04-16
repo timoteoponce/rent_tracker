@@ -32,6 +32,12 @@ public class ToggleStatusModel : PageModel
             return RedirectToPage("./Index");
         }
 
+        // Prevent deactivating system users
+        if (user.IsSystemUser || user.Username == "admin")
+        {
+            return RedirectToPage("./Index");
+        }
+
         user.IsActive = !user.IsActive;
         await _context.SaveChangesAsync();
 

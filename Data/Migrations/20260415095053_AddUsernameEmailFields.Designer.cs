@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RentTracker.Web.Data;
 
@@ -10,9 +11,11 @@ using RentTracker.Web.Data;
 namespace RentTracker.Web.Data.Migrations
 {
     [DbContext(typeof(RentTrackerDbContext))]
-    partial class RentTrackerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260415095053_AddUsernameEmailFields")]
+    partial class AddUsernameEmailFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");

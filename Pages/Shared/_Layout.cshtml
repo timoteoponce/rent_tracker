@@ -33,6 +33,7 @@
                 @if (User.Identity?.IsAuthenticated == true)
                 {
                     <span class="user-info">@User.Identity.Name (@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value)</span>
+                    <a asp-page="/Account/Profile" class="btn btn-sm">Profile</a>
                     <form asp-page="/Account/Logout" method="post" class="logout-form">
                         <button type="submit" class="btn btn-sm">Logout</button>
                     </form>

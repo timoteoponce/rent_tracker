@@ -47,17 +47,38 @@ public class EditModel : PageModel
             return NotFound();
         }
 
-        // Check for duplicate full name (excluding current user)
-        var existingUser = await _context.Users
-            .FirstOrDefaultAsync(u => u.FullName == User.FullName && u.Id != id);
-
-        if (existingUser != null)
+        // Prevent changing 'admin' username
+        if (userToUpdate.Username == "admin" && User.Username != "admin")
         {
-            ModelState.AddModelError("User.FullName", "A user with this name already exists.");
+            ModelState.AddModelError("User.Username", "The username 'admin' cannot be changed.");
+            return Page();
+        }
+
+        // Prevent assigning 'admin' username to another user
+        if (User.Username == "admin" && userToUpdate.Username != "admin")
+        {
+            ModelState.AddModelError("User.Username", "The username 'admin' is reserved.");
+            return Page();
+        }
+
+        // Check for duplicate username (excluding current user) - client-side check due to SQLite DateTimeOffset limitations
+        var allUsers = await _context.Users.ToListAsync();
+        
+        if (allUsers.Any(u => u.Username.Equals(User.Username, StringComparison.OrdinalIgnoreCase) && u.Id != id))
+        {
+            ModelState.AddModelError("User.Username", "This username is already taken.");
+            return Page();
+        }
+
+        if (allUsers.Any(u => u.Email.Equals(User.Email, StringComparison.OrdinalIgnoreCase) && u.Id != id))
+        {
+            ModelState.AddModelError("User.Email", "This email is already in use.");
             return Page();
         }
 
         // Update user properties
+        userToUpdate.Username = User.Username;
+        userToUpdate.Email = User.Email;
         userToUpdate.FullName = User.FullName;
         userToUpdate.Role = User.Role;
 

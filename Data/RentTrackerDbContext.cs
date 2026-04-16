@@ -28,9 +28,12 @@ public class RentTrackerDbContext : DbContext
         // User configuration
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasIndex(u => u.FullName).IsUnique();
-            entity.Property(u => u.Role).HasMaxLength(100);
+            entity.HasIndex(u => u.Username).IsUnique();
+            entity.HasIndex(u => u.Email).IsUnique();
+            entity.Property(u => u.Username).HasMaxLength(50);
+            entity.Property(u => u.Email).HasMaxLength(200);
             entity.Property(u => u.FullName).HasMaxLength(100);
+            entity.Property(u => u.Role).HasMaxLength(100);
         });
 
         // Property configuration
