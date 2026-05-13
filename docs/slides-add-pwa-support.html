@@ -372,6 +372,9 @@
                 <h2 style="font-weight: 300; font-size: 1.1em;">An Alternative to Native Mobile Development</h2>
                 <p style="margin-top: 1.5em; font-size: 0.8em;">Teaching Mobile Development &mdash; Exploring PWA as a viable path</p>
                 <p class="footer-text">Press arrow keys or space to navigate</p>
+                <aside class="notes">
+                    Welcome everyone. This is a 20-25 minute session on Progressive Web Apps as a modern alternative to native Android and React Native development. We're going to cover the basics, compare all three approaches with real data, and end with a live demo of a real application. Press the S key at any time to open the speaker notes view.
+                </aside>
             </section>
 
             <!-- Slide 2: About -->
@@ -397,6 +400,9 @@
                         </ul>
                     </div>
                 </div>
+                <aside class="notes">
+                    Set the context: you are teaching mobile dev and your students know Android (Kotlin/Java) and some know React Native. The goal today is to introduce a third path that uses pure web technologies. Emphasize that this is not about replacing what they know, but expanding their toolkit. Ask: "How many of you have heard of PWAs?"
+                </aside>
             </section>
 
             <!-- Slide 3: Objectives -->
@@ -408,6 +414,9 @@
                     <li class="fragment">Use <strong>data-driven insights</strong> to decide when to build native vs. PWA</li>
                     <li class="fragment">See a <strong>real-world demo</strong> of a PWA built with .NET and deployed live</li>
                 </ul>
+                <aside class="notes">
+                    Walk through each objective. The first two are foundational. The third is the most important: by the end of this talk, they should be able to look at a project idea and decide whether PWA, React Native, or Native is the right choice. The demo at the end will show that a PWA can be built with the same backend stack they already know (.NET + Razor Pages).
+                </aside>
             </section>
 
             <!-- Slide 4: What is a PWA? -->
@@ -433,6 +442,9 @@
                         <span style="color: var(--muted);">Android, iOS, Windows, macOS, ChromeOS</span>
                     </div>
                 </div>
+                <aside class="notes">
+                    Key message: A PWA is just a website that uses modern browser APIs to feel like an app. The students already know HTML, CSS, and JavaScript. No new language, no Android SDK, no Xcode. Point out the diagram: the same web technologies they use for any site, fed through the browser engine, producing an app-like experience. The two callouts are critical: no app store means no review delays, no 30% fees, and no gatekeeping. One codebase means they build once and it works on every device.
+                </aside>
             </section>
 
             <!-- Slide 5: Three Pillars -->
@@ -456,6 +468,9 @@
                     </div>
                 </div>
                 <p style="font-size: 0.7em; color: var(--muted); margin-top: 0.5em;">All three must be present for the browser to treat your site as a PWA.</p>
+                <aside class="notes">
+                    These three things are the ONLY technical requirements for a PWA. Service Workers are the magic: a JavaScript file that runs in the background, intercepts network requests, and decides whether to serve from cache or fetch from the network. The Manifest is just a JSON file — name, icons, colors. HTTPS is a hard requirement; without it, the browser refuses to register a Service Worker. Emphasize: if you can add these three things to an existing website, it becomes a PWA. That's how simple the barrier is.
+                </aside>
             </section>
 
             <!-- Slide 6: Core Features -->
@@ -471,6 +486,9 @@
                     <div class="feature-cell fragment"><span class="fi">&#128269;</span><span class="ft">Discoverable</span><span class="fd">SEO-friendly</span></div>
                     <div class="feature-cell fragment"><span class="fi">&#128274;</span><span class="ft">Secure</span><span class="fd">HTTPS only</span></div>
                 </div>
+                <aside class="notes">
+                    Go through the grid quickly — this is more about impression than detail. Highlight three that students care about most: Installable (no store), Offline (works on flaky campus WiFi), and Instant Updates (push code, users get it immediately). Linkable is also important: unlike native apps, every screen in a PWA has a URL you can share. Discoverable means Google can index it — free organic traffic. Spend about 1 minute here, then move on.
+                </aside>
             </section>
 
             <!-- Slide 7: History -->
@@ -485,6 +503,9 @@
                     <div class="t-event"><div class="tdot"></div><span class="ty">2026</span><span class="tt">First-class on all OS</span></div>
                 </div>
                 <p style="font-size: 0.7em; color: var(--muted); margin-top: 0.8em;">In 11 years, PWAs went from experiment to standard on every major platform.</p>
+                <aside class="notes">
+                    Walk the timeline left to right. The 2017 Twitter Lite milestone is huge: they replaced their native app in some markets with a PWA and saw a 70% drop in data usage and 65% more pages per session. The 2023 iOS web push support is the turning point: before this, iOS was the big gap. Now every major platform supports PWAs fully. Mention that today (2026), PWAs are treated as first-class citizens on Android, iOS, Windows, macOS, and ChromeOS.
+                </aside>
             </section>
 
             <!-- Slide 8: Native Android -->
@@ -504,6 +525,9 @@
                         <ul><li>iOS needs separate build</li><li>Longer dev cycles</li><li>Approval delays</li><li>Higher cost</li></ul>
                     </div>
                 </div>
+                <aside class="notes">
+                    Ask the room: "Who here has built a native Android app?" Acknowledge that native Android is powerful — Kotlin is a great language, and you get full access to every hardware sensor. But the big pain points are on the right side: if you want iOS users too, you need to learn Swift and maintain a second codebase. The Play Store review process can take days. And the 30% fee on in-app purchases is real money. Native is the right choice for some apps, but not all.
+                </aside>
             </section>
 
             <!-- Slide 9: React Native -->
@@ -523,6 +547,9 @@
                         <ul><li>Bridge overhead</li><li>Native modules needed</li><li>Meta dependency</li><li>Store bureaucracy</li></ul>
                     </div>
                 </div>
+                <aside class="notes">
+                    Ask: "Who has used React Native?" React Native is the middle ground: one codebase for Android and iOS, which is a huge win. But the bridge concept is important to explain: your JavaScript talks to native code through a bridge, and that bridge has overhead. For simple UIs you won't notice, but for complex animations or heavy computation, you might. Also, you still deal with app stores — review processes, rejections, update delays. And if Meta ever changes priorities, the ecosystem shifts. It's a solid choice, but it inherits some of native's pain points.
+                </aside>
             </section>
 
             <!-- Slide 10: Comparison -->
@@ -543,6 +570,9 @@
                 <p style="font-size: 0.6em; color: var(--muted); margin-top: 0.5em;">
                     <span style="color: var(--accent);">&#10004;</span> = Full &nbsp;|&nbsp; <span style="color: #ca8a04;">~</span> = Partial &nbsp;|&nbsp; <span style="color: var(--danger);">&#10008;</span> = None
                 </p>
+                <aside class="notes">
+                    Walk through the matrix row by row. The three green checkmarks for PWA that matter most: No App Store, Instant Updates, and Low Cost. These are the business differentiators. Note that offline support and push notifications are now table stakes — all three approaches handle them. The two yellow tildes for PWA are hardware access and max performance; that's the trade-off. But as we'll see on the next slide, that trade-off doesn't matter for 80% of apps.
+                </aside>
             </section>
 
             <!-- Slide 11: Performance -->
@@ -559,6 +589,9 @@
                     </div>
                 </div>
                 <p style="font-size: 0.7em; color: var(--muted); margin-top: 0.5em; font-style: italic;">For 80%+ of business apps, the performance difference is imperceptible.</p>
+                <aside class="notes">
+                    This is the most important slide for students who are worried that PWA means "slow web app." Emphasize the 80% rule: if the app is about displaying and interacting with data — lists, forms, charts, text, images — the user cannot tell the difference between a PWA and a native app. The browser engine is highly optimized. The right column is the exception list: only apps that push hardware to its absolute limit truly need native. Ask students: what kind of app do YOU want to build? Is it on the left or the right?
+                </aside>
             </section>
 
             <!-- Slide 12: Cost & Time -->
@@ -575,6 +608,9 @@
                     <div class="cost-row"><div class="cost-name">Native</div><div class="cost-track"><div class="cost-fill nat" style="width: 100%;">$30k&ndash;$90k</div></div><div class="cost-val">4&ndash;8 mo</div></div>
                 </div>
                 <p style="font-size: 0.6em; color: var(--muted);">Source: Sechak, CISIN, Apptage 2025/2026</p>
+                <aside class="notes">
+                    The bar chart tells the story visually: PWA is roughly one-third the cost and one-third the time of native development. For students building portfolio projects or startups, this is huge. The 68% traffic increase stat comes from Google: companies that launched PWAs saw their mobile traffic jump because PWAs are indexed by search engines — users find them via Google, not just the app store. The 15x faster load is versus a traditional mobile website, not native. Emphasize: cheaper, faster, AND discoverable.
+                </aside>
             </section>
 
             <!-- Slide 13: Market -->
@@ -586,6 +622,9 @@
                     <div class="stat-card fragment"><span class="num">31.1%</span><span class="lab">Annual growth rate</span></div>
                 </div>
                 <p style="font-size: 0.75em; color: var(--muted); margin-top: 1em;">Major adopters: Twitter, Pinterest, Starbucks, Forbes, Uber</p>
+                <aside class="notes">
+                    These numbers prove this is not a fad. A 31% compound annual growth rate means the PWA market is roughly tripling between 2023 and 2030. The companies listed are not small startups — these are billion-dollar businesses that made a calculated decision. Twitter built Twitter Lite for emerging markets with slow connections. Starbucks built a PWA so customers could order offline and sync when connected. Uber's PWA is 50KB and loads in 3 seconds on 2G. Real companies, real money, real results.
+                </aside>
             </section>
 
             <!-- Slide 14: Distribution -->
@@ -602,6 +641,9 @@
                     <div class="bar-row fragment"><div class="bar-label">Mobile Games</div><div class="bar-track"><div class="bar-fill native" style="width: 98%;">98% Native</div></div></div>
                 </div>
                 <p style="font-size: 0.65em; color: var(--muted); margin-top: 0.5em;"><em>Estimates from App Annie / data.ai and PWA industry case studies</em></p>
+                <aside class="notes">
+                    The green bars are the apps that work perfectly as PWAs. Notice that the majority of real-world business apps — e-commerce, booking, content, productivity — are overwhelmingly PWA-suitable. Only the bottom two categories (AR/VR and games) genuinely need native. Ask students to think about what THEY want to build. If it's a social app for their campus, a store for their family business, or a dashboard for their internship — it's probably in the green zone.
+                </aside>
             </section>
 
             <!-- Slide 15: PWA Candidates -->
@@ -617,6 +659,9 @@
                         <ul><li>Content-driven, not compute-heavy</li><li>Users value speed</li><li>SEO matters</li><li>Frequent updates needed</li><li>Cross-platform priority</li><li>Budget constraints</li></ul>
                     </div>
                 </div>
+                <aside class="notes">
+                    These are the categories where PWAs have the strongest track record. E-commerce is the biggest: companies like Alibaba, Flipkart, and Forbes all saw massive conversion rate improvements after switching to PWA. Dashboards and admin tools are perfect because the users are on laptops and phones, and the developers need to ship updates constantly. Documentation sites benefit enormously from SEO — a native app can't be found via Google search. Encourage students to match their project ideas against this list.
+                </aside>
             </section>
 
             <!-- Slide 16: Native Required -->
@@ -636,6 +681,9 @@
                         </p>
                     </div>
                 </div>
+                <aside class="notes">
+                    This is the honest side of the comparison. PWAs are not a silver bullet. If you're building a game that needs 60fps 3D rendering, or an app that pairs with a Bluetooth medical device, native is still the right choice. The rule of thumb in the right column is the key takeaway of the entire presentation: if your app is about data — displaying it, collecting it, reporting on it — a PWA is almost always sufficient. That describes the vast majority of student projects and business apps.
+                </aside>
             </section>
 
             <!-- Slide 17: Success Stories -->
@@ -659,6 +707,9 @@
                     </div>
                 </div>
                 <p style="font-size: 0.7em; color: var(--muted); margin-top: 0.8em;">Companies switched to PWAs to improve performance, reduce cost, and reach users faster.</p>
+                <aside class="notes">
+                    These are the proof points. Twitter Lite was specifically built for emerging markets where data is expensive and phones are low-end. The PWA was under 1MB and loaded almost instantly. Pinterest rebuilt their mobile web experience as a PWA and saw time spent increase by 40%. Starbucks' PWA lets you browse the menu and customize orders while offline — it syncs when you reconnect. All three replaced or supplemented their native apps with PWAs. Not because they couldn't afford native, but because PWA was the better business choice.
+                </aside>
             </section>
 
             <!-- Slide 18: Decision Framework -->
@@ -675,6 +726,9 @@
                     <div class="decision-a">PWA</div>
                 </div>
                 <p style="font-size: 0.7em; color: var(--muted); margin-top: 0.5em;">Start with the left column. If the answer is <strong>yes</strong>, follow the right column.</p>
+                <aside class="notes">
+                    This is the practical takeaway students should screenshot or write down. Walk through each question: deep hardware means sensors the web API can't access yet. Speed-to-market means MVPs, hackathons, and class projects — PWA wins every time. App store presence is a marketing/branding decision; if your client insists on being in the Play Store, React Native is the cheaper cross-platform option. SEO matters for user acquisition — if people find you via Google search, PWA is the only choice among these three. This grid covers 90% of real-world decisions.
+                </aside>
             </section>
 
             <!-- Slide 19: Demo -->
@@ -695,6 +749,9 @@
                     </ul>
                 </div>
                 <p class="footer-text">Try it on your phone right now!</p>
+                <aside class="notes">
+                    This is the demo slide. Open the live site on your laptop and ideally on your phone too. Show them the install prompt on Chrome (it should appear as a small icon in the address bar). Scroll through the app, then turn off WiFi and refresh — the offline page should appear. Mention that this was built with .NET Razor Pages, the same stack many of them use. The PWA additions were just a manifest.json file (20 lines) and a service worker (75 lines). The PR on GitHub shows the exact diff. Ask students to open the link on their phones during the break.
+                </aside>
             </section>
 
             <!-- Slide 20: Technical Architecture -->
@@ -727,6 +784,9 @@
                         <strong>Layout Changes:</strong> iOS meta tags, SW registration, update banner
                     </div>
                 </div>
+                <aside class="notes">
+                    Walk through the diagram top to bottom. The user layer is the same for all three approaches — the user doesn't care about the tech stack. The PWA layer is what makes this special: just three files. The manifest.json tells the browser how to treat the site as an app. The service worker (sw.js) caches static files and handles offline. HTTPS is already required for any modern site. The server layer uses .NET Razor Pages and SQLite — the same stack the students already know. The key insight: you don't need to change your backend to add PWA support.
+                </aside>
             </section>
 
             <!-- Slide 21: References -->
@@ -741,6 +801,9 @@
                     <li>Google Developers &mdash; Web Fundamentals: Progressive Web Apps</li>
                     <li>MDN Web Docs &mdash; Progressive Web Apps guides</li>
                 </ul>
+                <aside class="notes">
+                    These are curated sources for students who want to go deeper. The Google Developers and MDN links are the authoritative technical references. The industry reports (Notix, Progressier, CISIN, Apptage, Sechak) contain the market data and cost comparisons used in this presentation. Mention that web.dev has excellent step-by-step tutorials for building your first PWA.
+                </aside>
             </section>
 
             <!-- Slide 22: Q&A -->
@@ -755,6 +818,9 @@
                         <li>How does React Native compare for your use case?</li>
                     </ul>
                 </div>
+                <aside class="notes">
+                    Leave 3 to 5 minutes for questions. Common questions to expect: "Can PWAs access the camera?" (Yes, via getUserMedia API). "Do PWAs work on iOS?" (Yes, since 2023 with full push support). "How do users find PWAs?" (Google search, social media links, QR codes — same as any website). "Can I charge money?" (Yes, use Stripe/PayPal — no 30% store fee). If time allows, ask students to share their project ideas and apply the decision framework together.
+                </aside>
             </section>
 
             <!-- Slide 23: Thank You -->
@@ -765,6 +831,9 @@
                     <a href="https://rent-tracker.mirthajimenez.qzz.io/" target="_blank" style="color: white; text-decoration: underline; font-size: 0.8em;">rent-tracker.mirthajimenez.qzz.io</a>
                 </div>
                 <p class="footer-text">Press ESC for slide overview</p>
+                <aside class="notes">
+                    Wrap up by reiterating the core message: PWAs are not a replacement for native or React Native — they are a third option that makes sense for the majority of apps. The students already have the skills (HTML, CSS, JS) to build one today. The live site and GitHub PR are available for them to explore. Encourage them to try adding a manifest and service worker to one of their existing web projects — it takes less than an hour. Thank them for their attention and remind them the speaker notes are available by pressing the S key anytime.
+                </aside>
             </section>
 
         </div>
