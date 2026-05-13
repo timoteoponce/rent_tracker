@@ -31,6 +31,7 @@ public class CreateModel : PageModel
     public async Task<IActionResult> OnPostAsync()
     {
         ModelState.Remove("Property.Owner");
+        ModelState.Remove("Property.Units");
         ModelState.Remove("Property.Leases");
         ModelState.Remove("Property.PriceHistory");
 
@@ -39,17 +40,19 @@ public class CreateModel : PageModel
             return Page();
         }
 
-        if (Property.CanBeLeasedByUnits && UnitInputs.Any(u => !string.IsNullOrWhiteSpace(u.Name)))
+        var validInputs = UnitInputs.Where(u => u != null).ToList();
+
+        if (Property.CanBeLeasedByUnits && validInputs.Any(u => !string.IsNullOrWhiteSpace(u.Name)))
         {
-            foreach (var unitInput in UnitInputs.Where(u => !string.IsNullOrWhiteSpace(u.Name)))
+            foreach (var unitInput in validInputs.Where(u => !string.IsNullOrWhiteSpace(u.Name)))
             {
                 var unit = new PropertyUnit
                 {
                     PropertyId = Property.Id,
                     Name = unitInput.Name,
                     Description = unitInput.Description,
-                    Price = unitInput.Price > 0 ? unitInput.Price : Property.CurrentPrice,
-                    Warranty = unitInput.Warranty > 0 ? unitInput.Warranty : Property.CurrentWarranty,
+                    Price = unitInput.Price > 0 ? unitInput.Price.Value : Property.CurrentPrice,
+                    Warranty = unitInput.Warranty > 0 ? unitInput.Warranty.Value : Property.CurrentWarranty,
                     IsAvailable = true,
                     CreatedAt = DateTimeOffset.UtcNow
                 };
@@ -78,7 +81,7 @@ public class CreateModel : PageModel
     {
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
-        public decimal Price { get; set; }
-        public decimal Warranty { get; set; }
+        public decimal? Price { get; set; }
+        public decimal? Warranty { get; set; }
     }
 }

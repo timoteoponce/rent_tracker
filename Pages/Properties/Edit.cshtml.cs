@@ -69,6 +69,7 @@ public class EditModel : PageModel
     public async Task<IActionResult> OnPostAsync(Guid id)
     {
         ModelState.Remove("Property.Owner");
+        ModelState.Remove("Property.Units");
         ModelState.Remove("Property.Leases");
         ModelState.Remove("Property.PriceHistory");
 
@@ -122,8 +123,12 @@ public class EditModel : PageModel
         propertyToUpdate.CanBeLeasedByUnits = Property.CanBeLeasedByUnits;
         propertyToUpdate.UpdatedAt = DateTimeOffset.UtcNow;
 
+        // Filter out null entries (can happen when unit rows are removed client-side,
+        // creating non-sequential indices that the model binder fills with nulls)
+        var validInputs = UnitInputs.Where(u => u != null).ToList();
+
         // Process units
-        var submittedIds = UnitInputs.Where(u => u.Id != Guid.Empty).Select(u => u.Id).ToHashSet();
+        var submittedIds = validInputs.Where(u => u.Id != Guid.Empty).Select(u => u.Id).ToHashSet();
 
         // Delete units that were removed from the form (and have no lease history)
         var unitsToDelete = propertyToUpdate.Units
@@ -140,7 +145,7 @@ public class EditModel : PageModel
         }
 
         // Add new units and update existing ones
-        foreach (var unitInput in UnitInputs)
+        foreach (var unitInput in validInputs)
         {
             if (string.IsNullOrWhiteSpace(unitInput.Name))
                 continue;
@@ -153,8 +158,8 @@ public class EditModel : PageModel
                     PropertyId = propertyToUpdate.Id,
                     Name = unitInput.Name,
                     Description = unitInput.Description,
-                    Price = unitInput.Price > 0 ? unitInput.Price : propertyToUpdate.CurrentPrice,
-                    Warranty = unitInput.Warranty > 0 ? unitInput.Warranty : propertyToUpdate.CurrentWarranty,
+                    Price = unitInput.Price > 0 ? unitInput.Price.Value : propertyToUpdate.CurrentPrice,
+                    Warranty = unitInput.Warranty > 0 ? unitInput.Warranty.Value : propertyToUpdate.CurrentWarranty,
                     IsAvailable = true,
                     CreatedAt = DateTimeOffset.UtcNow
                 };
@@ -168,8 +173,8 @@ public class EditModel : PageModel
                 {
                     existingUnit.Name = unitInput.Name;
                     existingUnit.Description = unitInput.Description;
-                    existingUnit.Price = unitInput.Price;
-                    existingUnit.Warranty = unitInput.Warranty;
+                    existingUnit.Price = unitInput.Price ?? existingUnit.Price;
+                    existingUnit.Warranty = unitInput.Warranty ?? existingUnit.Warranty;
                 }
             }
         }
@@ -181,9 +186,9 @@ public class EditModel : PageModel
 
     private async Task ReloadLockedUnitIds()
     {
-        foreach (var unit in UnitInputs)
+        foreach (var unit in UnitInputs.Where(u => u != null))
         {
-            if (unit.Id != Guid.Empty)
+            if (unit!.Id != Guid.Empty)
             {
                 var hasLeases = await _context.Leases.AnyAsync(l => l.PropertyUnitId == unit.Id);
                 unit.IsLocked = hasLeases;
@@ -200,8 +205,8 @@ public class EditModel : PageModel
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
-        public decimal Price { get; set; }
-        public decimal Warranty { get; set; }
+        public decimal? Price { get; set; }
+        public decimal? Warranty { get; set; }
         public bool IsLocked { get; set; }
     }
 }
