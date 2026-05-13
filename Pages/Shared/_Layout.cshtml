@@ -4,10 +4,6 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - RentTracker</title>
-    <meta name="theme-color" content="#2563eb" />
-    <link rel="manifest" href="~/manifest.json" />
-    <link rel="icon" href="~/icons/icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="~/icons/icon.svg" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
@@ -56,10 +52,5 @@
 
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/js/sw.js');
-        }
-    </script>
 </body>
 </html>
