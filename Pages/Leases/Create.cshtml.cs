@@ -24,28 +24,51 @@ public class CreateModel : PageModel
     public SelectList AvailableProperties { get; set; } = new(Enumerable.Empty<object>());
     public SelectList AvailableUnits { get; set; } = new(Enumerable.Empty<object>());
     public SelectList AvailableTenants { get; set; } = new(Enumerable.Empty<object>());
+    public bool ShowUnitSection { get; set; }
 
-    public async Task OnGetAsync()
+    public async Task OnGetAsync(Guid? propertyId, Guid? unitId)
     {
-        await LoadSelectListsAsync();
-        
-        // Set default start date to today
         Lease.StartDate = DateTimeOffset.UtcNow;
+
+        if (unitId.HasValue)
+        {
+            var unit = await _context.PropertyUnits
+                .Include(u => u.Property)
+                .FirstOrDefaultAsync(u => u.Id == unitId.Value);
+            if (unit != null)
+            {
+                Lease.PropertyId = unit.PropertyId;
+                Lease.PropertyUnitId = unitId.Value;
+                Lease.AgreedPrice = unit.Price;
+                Lease.AgreedWarranty = unit.Warranty;
+            }
+        }
+        else if (propertyId.HasValue)
+        {
+            var unitless = await _context.Properties.FindAsync(propertyId.Value);
+            if (unitless != null)
+            {
+                Lease.PropertyId = propertyId.Value;
+                Lease.AgreedPrice = unitless.CurrentPrice;
+                Lease.AgreedWarranty = unitless.CurrentWarranty;
+            }
+        }
+
+        await LoadSelectListsAsync();
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
-        // Remove validation for navigation properties - only FK IDs are submitted from form
         ModelState.Remove("Lease.Property");
         ModelState.Remove("Lease.Tenant");
-        
+        ModelState.Remove("Lease.PropertyUnit");
+
         if (!ModelState.IsValid)
         {
             await LoadSelectListsAsync();
             return Page();
         }
 
-        // Check if property has active lease
         var property = await _context.Properties
             .Include(p => p.Leases)
             .Include(p => p.Units)
@@ -61,7 +84,6 @@ public class CreateModel : PageModel
         // Validate based on unit vs whole property
         if (Lease.PropertyUnitId.HasValue)
         {
-            // Leasing a specific unit
             var unit = property.Units.FirstOrDefault(u => u.Id == Lease.PropertyUnitId.Value);
             if (unit == null)
             {
@@ -77,7 +99,6 @@ public class CreateModel : PageModel
                 return Page();
             }
 
-            // Check if unit already has active lease
             var unitHasActiveLease = await _context.Leases
                 .AnyAsync(l => l.PropertyUnitId == unit.Id && l.Status == LeaseStatus.Active);
 
@@ -92,10 +113,8 @@ public class CreateModel : PageModel
         }
         else
         {
-            // Leasing whole property
             if (!property.CanBeLeasedByUnits)
             {
-                // Check if property has active lease
                 var propertyHasActiveLease = property.Leases.Any(l => l.Status == LeaseStatus.Active);
                 if (propertyHasActiveLease)
                 {
@@ -106,7 +125,6 @@ public class CreateModel : PageModel
             }
             else
             {
-                // Property can be leased by units - check if any units are leased
                 var anyUnitLeased = await _context.Leases
                     .AnyAsync(l => l.PropertyId == property.Id && 
                                    l.Status == LeaseStatus.Active && 
@@ -119,7 +137,6 @@ public class CreateModel : PageModel
                     return Page();
                 }
 
-                // Check if whole property is already leased
                 var wholePropertyLeased = await _context.Leases
                     .AnyAsync(l => l.PropertyId == property.Id && 
                                    l.Status == LeaseStatus.Active && 
@@ -160,7 +177,12 @@ public class CreateModel : PageModel
         }
 
         var units = property.CanBeLeasedByUnits 
-            ? property.Units.Where(u => u.IsAvailable).Select(u => new { id = u.Id, name = u.Name, price = u.Price }).Cast<object>().ToList()
+            ? property.Units.Select(u => new { 
+                id = u.Id, 
+                name = u.Name, 
+                price = u.Price, 
+                isAvailable = u.IsAvailable 
+              }).Cast<object>().ToList()
             : new List<object>();
 
         return new JsonResult(new { 
@@ -173,35 +195,30 @@ public class CreateModel : PageModel
 
     private async Task LoadSelectListsAsync()
     {
-        // Get properties that don't have active whole-property leases
         var availableProperties = await _context.Properties
             .Where(p => p.IsEnabled)
             .ToListAsync();
 
-        // Filter out properties with active whole leases client-side
         var propertyList = new List<Property>();
         foreach (var prop in availableProperties)
         {
             if (prop.CanBeLeasedByUnits)
             {
-                // Check if any units are available or if whole property can be leased
-                var units = await _context.PropertyUnits
-                    .Where(u => u.PropertyId == prop.Id && u.IsAvailable)
-                    .ToListAsync();
+                var hasUnits = await _context.PropertyUnits
+                    .AnyAsync(u => u.PropertyId == prop.Id);
                 
                 var wholePropertyLeased = await _context.Leases
                     .AnyAsync(l => l.PropertyId == prop.Id && 
                                    l.Status == LeaseStatus.Active && 
                                    l.PropertyUnitId == null);
 
-                if (units.Any() || !wholePropertyLeased)
+                if (hasUnits || !wholePropertyLeased)
                 {
                     propertyList.Add(prop);
                 }
             }
             else
             {
-                // Check if property has active lease
                 var hasActiveLease = await _context.Leases
                     .AnyAsync(l => l.PropertyId == prop.Id && l.Status == LeaseStatus.Active);
                 
@@ -214,13 +231,29 @@ public class CreateModel : PageModel
 
         AvailableProperties = new SelectList(propertyList, "Id", "Name");
 
-        // Get tenants (users with Tenant role)
         var tenants = await _context.Users
             .Where(u => u.Role == UserRoles.Tenant && u.IsActive)
             .ToListAsync();
         AvailableTenants = new SelectList(tenants, "Id", "FullName");
 
-        // Units will be loaded via JavaScript based on property selection
-        AvailableUnits = new SelectList(Enumerable.Empty<PropertyUnit>(), "Id", "Name");
+        // Pre-populate units if a property is selected
+        if (Lease.PropertyId != Guid.Empty)
+        {
+            var prop = propertyList.FirstOrDefault(p => p.Id == Lease.PropertyId);
+            if (prop != null && prop.CanBeLeasedByUnits)
+            {
+                var units = await _context.PropertyUnits
+                    .Where(u => u.PropertyId == Lease.PropertyId)
+                    .ToListAsync();
+
+                AvailableUnits = new SelectList(
+                    units.OrderBy(u => u.Name),
+                    "Id",
+                    "Name",
+                    Lease.PropertyUnitId);
+
+                ShowUnitSection = prop.CanBeLeasedByUnits && units.Any();
+            }
+        }
     }
 }

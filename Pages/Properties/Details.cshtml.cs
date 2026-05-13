@@ -34,6 +34,7 @@ public class DetailsModel : PageModel
         // Get lease history - client side sort for DateTimeOffset
         var leasesList = await _context.Leases
             .Include(l => l.Tenant)
+            .Include(l => l.PropertyUnit)
             .Where(l => l.PropertyId == id)
             .ToListAsync();
 

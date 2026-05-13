@@ -12,14 +12,14 @@
 <div class="page-content">
     <form method="post" class="form-horizontal">
         <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
-        
+
         <div class="form-row">
             <div class="form-group">
                 <label asp-for="Property.Name"></label>
                 <input asp-for="Property.Name" class="form-control" />
                 <span asp-validation-for="Property.Name" class="text-danger"></span>
             </div>
-            
+
             <div class="form-group">
                 <label asp-for="Property.Location"></label>
                 <input asp-for="Property.Location" class="form-control" placeholder="Paste Google Maps link" />
@@ -33,7 +33,7 @@
                 <input asp-for="Property.SurfaceSquareMeters" type="number" step="0.01" class="form-control" />
                 <span asp-validation-for="Property.SurfaceSquareMeters" class="text-danger"></span>
             </div>
-            
+
             <div class="form-group">
                 <label asp-for="Property.NumberOfRooms"></label>
                 <input asp-for="Property.NumberOfRooms" type="number" class="form-control" />
@@ -47,7 +47,7 @@
                 <input asp-for="Property.CurrentPrice" type="number" step="0.01" class="form-control" />
                 <span asp-validation-for="Property.CurrentPrice" class="text-danger"></span>
             </div>
-            
+
             <div class="form-group">
                 <label asp-for="Property.CurrentWarranty"></label>
                 <input asp-for="Property.CurrentWarranty" type="number" step="0.01" class="form-control" />
@@ -95,8 +95,39 @@
 
         <div class="form-group">
             <div class="form-check">
-                <input asp-for="Property.CanBeLeasedByUnits" type="checkbox" class="form-check-input" />
+                <input asp-for="Property.CanBeLeasedByUnits" type="checkbox" class="form-check-input" id="canBeLeasedByUnits" />
                 <label asp-for="Property.CanBeLeasedByUnits" class="form-check-label">Can be leased by units</label>
+            </div>
+        </div>
+
+        <div id="unitsSection" class="card" style="display: none;">
+            <div class="card-header">
+                <h4 class="card-title">Units</h4>
+                <button type="button" class="btn btn-sm btn-primary" id="addUnitBtn">Add Unit</button>
+            </div>
+            <div id="unitsContainer">
+                <div class="unit-row form-row" data-index="0">
+                    <div class="form-group">
+                        <label>Unit Name</label>
+                        <input name="UnitInputs[0].Name" class="form-control" placeholder="e.g. Front Unit" />
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input name="UnitInputs[0].Description" class="form-control" placeholder="Optional" />
+                    </div>
+                    <div class="form-group">
+                        <label>Price (BOB)</label>
+                        <input name="UnitInputs[0].Price" type="number" step="0.01" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Warranty (BOB)</label>
+                        <input name="UnitInputs[0].Warranty" type="number" step="0.01" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="button" class="btn btn-sm btn-danger remove-unit-btn">Remove</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -108,4 +139,43 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function() {
+            var canBeLeasedByUnits = document.getElementById('canBeLeasedByUnits');
+            var unitsSection = document.getElementById('unitsSection');
+            var unitsContainer = document.getElementById('unitsContainer');
+            var addUnitBtn = document.getElementById('addUnitBtn');
+            var unitIndex = 1;
+
+            function toggleUnitsSection() {
+                unitsSection.style.display = canBeLeasedByUnits.checked ? 'block' : 'none';
+            }
+
+            canBeLeasedByUnits.addEventListener('change', toggleUnitsSection);
+            toggleUnitsSection();
+
+            addUnitBtn.addEventListener('click', function() {
+                var idx = unitIndex++;
+                var row = document.createElement('div');
+                row.className = 'unit-row form-row';
+                row.dataset.index = idx;
+                row.innerHTML =
+                    '<div class="form-group"><label>Unit Name</label><input name="UnitInputs[' + idx + '].Name" class="form-control" placeholder="e.g. Front Unit" /></div>' +
+                    '<div class="form-group"><label>Description</label><input name="UnitInputs[' + idx + '].Description" class="form-control" placeholder="Optional" /></div>' +
+                    '<div class="form-group"><label>Price (BOB)</label><input name="UnitInputs[' + idx + '].Price" type="number" step="0.01" class="form-control" /></div>' +
+                    '<div class="form-group"><label>Warranty (BOB)</label><input name="UnitInputs[' + idx + '].Warranty" type="number" step="0.01" class="form-control" /></div>' +
+                    '<div class="form-group"><label>&nbsp;</label><button type="button" class="btn btn-sm btn-danger remove-unit-btn">Remove</button></div>';
+                unitsContainer.appendChild(row);
+            });
+
+            unitsContainer.addEventListener('click', function(e) {
+                if (e.target.classList.contains('remove-unit-btn')) {
+                    var rows = unitsContainer.querySelectorAll('.unit-row');
+                    if (rows.length > 1) {
+                        e.target.closest('.unit-row').remove();
+                    }
+                }
+            });
+        })();
+    </script>
 }

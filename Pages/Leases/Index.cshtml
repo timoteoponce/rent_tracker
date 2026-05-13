@@ -57,6 +57,7 @@
                                 <a asp-page="./Details" asp-route-id="@lease.Id" class="btn btn-sm btn-secondary">View</a>
                                 @if (lease.Status == "Active")
                                 {
+                                    <a asp-page="./Edit" asp-route-id="@lease.Id" class="btn btn-sm btn-secondary">Edit</a>
                                     <a asp-page="./Close" asp-route-id="@lease.Id" class="btn btn-sm btn-secondary">Close</a>
                                     <a asp-page="./Terminate" asp-route-id="@lease.Id" class="btn btn-sm btn-danger">Terminate</a>
                                 }

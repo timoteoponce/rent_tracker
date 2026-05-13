@@ -24,7 +24,7 @@
             <span asp-validation-for="Lease.PropertyId" class="text-danger"></span>
         </div>
 
-        <div class="form-group" id="unitSection" style="display: none;">
+        <div class="form-group" id="unitSection" style="display: @(Model.ShowUnitSection ? "block" : "none");">
             <label asp-for="Lease.PropertyUnitId"></label>
             <select asp-for="Lease.PropertyUnitId" asp-items="Model.AvailableUnits" class="form-control" id="unitSelect">
                 <option value="">-- Whole Property --</option>
@@ -70,57 +70,64 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        document.getElementById('propertySelect').addEventListener('change', function() {
-            var propertyId = this.value;
+        (function() {
+            var propertySelect = document.getElementById('propertySelect');
             var unitSection = document.getElementById('unitSection');
             var unitSelect = document.getElementById('unitSelect');
             var agreedPriceInput = document.getElementById('agreedPrice');
             var agreedWarrantyInput = document.getElementById('agreedWarranty');
-            
-            if (propertyId) {
-                // Fetch available units for this property
+
+            function loadUnits(propertyId) {
+                if (!propertyId) {
+                    unitSection.style.display = 'none';
+                    agreedPriceInput.value = '';
+                    agreedWarrantyInput.value = '';
+                    return;
+                }
+
                 fetch('?handler=Units&propertyId=' + propertyId)
-                    .then(response => response.json())
-                    .then(data => {
+                    .then(function(response) { return response.json(); })
+                    .then(function(data) {
                         if (data.canBeLeasedByUnits) {
                             unitSection.style.display = 'block';
-                            // Update unit dropdown
                             unitSelect.innerHTML = '<option value="">-- Whole Property --</option>';
-                            data.units.forEach(unit => {
+                            data.units.forEach(function(unit) {
                                 var option = document.createElement('option');
                                 option.value = unit.id;
                                 option.textContent = unit.name + ' (Bs. ' + unit.price.toFixed(2) + ')';
+                                if (!unit.isAvailable) {
+                                    option.disabled = true;
+                                    option.textContent += ' (Occupied)';
+                                }
                                 unitSelect.appendChild(option);
                             });
                         } else {
                             unitSection.style.display = 'none';
                             unitSelect.value = '';
                         }
-                        
-                        // Populate default price and warranty from property
+
                         agreedPriceInput.value = data.defaultPrice.toFixed(2);
                         agreedWarrantyInput.value = data.defaultWarranty.toFixed(2);
+                    })
+                    .catch(function() {
+                        // fallback: keep server-rendered options
                     });
-            } else {
-                unitSection.style.display = 'none';
-                agreedPriceInput.value = '';
-                agreedWarrantyInput.value = '';
             }
-        });
-        
-        // Handle unit selection to update price
-        document.getElementById('unitSelect').addEventListener('change', function() {
-            var unitId = this.value;
-            var agreedPriceInput = document.getElementById('agreedPrice');
-            
-            if (unitId) {
-                // Find the selected unit's price from the dropdown options
-                var selectedOption = this.options[this.selectedIndex];
-                var priceMatch = selectedOption.textContent.match(/Bs\.\s+([\d,.]+)/);
-                if (priceMatch) {
-                    agreedPriceInput.value = parseFloat(priceMatch[1].replace(',', '')).toFixed(2);
+
+            propertySelect.addEventListener('change', function() {
+                loadUnits(this.value);
+            });
+
+            unitSelect.addEventListener('change', function() {
+                var unitId = this.value;
+                if (unitId) {
+                    var selectedOption = this.options[this.selectedIndex];
+                    var priceMatch = selectedOption.textContent.match(/Bs\.\s+([\d,.]+)/);
+                    if (priceMatch) {
+                        agreedPriceInput.value = parseFloat(priceMatch[1].replace(',', '')).toFixed(2);
+                    }
                 }
-            }
-        });
+            });
+        })();
     </script>
 }
