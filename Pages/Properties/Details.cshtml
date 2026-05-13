@@ -122,6 +122,7 @@
                             <th>Name</th>
                             <th>Price</th>
                             <th>Status</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -138,6 +139,12 @@
                                     else
                                     {
                                         <span class="badge badge-warning">Occupied</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (unit.IsAvailable && (User.IsInRole("Administrator") || User.IsInRole("Owner")))
+                                    {
+                                        <a asp-page="/Leases/Create" asp-route-propertyId="@Model.Property.Id" asp-route-unitId="@unit.Id" class="btn btn-sm btn-primary">Lease</a>
                                     }
                                 </td>
                             </tr>
@@ -159,6 +166,10 @@
                     <thead>
                         <tr>
                             <th>Tenant</th>
+                            @if (Model.Property.CanBeLeasedByUnits)
+                            {
+                                <th>Unit</th>
+                            }
                             <th>Start Date</th>
                             <th>End Date</th>
                             <th>Status</th>
@@ -170,6 +181,10 @@
                         {
                             <tr>
                                 <td>@lease.Tenant.FullName</td>
+                                @if (Model.Property.CanBeLeasedByUnits)
+                                {
+                                    <td>@(lease.PropertyUnit?.Name ?? "Whole Property")</td>
+                                }
                                 <td>@lease.StartDate.ToString("dd MMM yyyy")</td>
                                 <td>@(lease.EndDate?.ToString("dd MMM yyyy") ?? "-")</td>
                                 <td>
@@ -199,7 +214,7 @@
                     @(Model.Property.IsEnabled ? "Disable Property" : "Enable Property")
                 </button>
             </form>
-            <a asp-page="./Units" asp-route-id="@Model.Property.Id" class="btn btn-secondary">Manage Units</a>
+            <a asp-page="./Edit" asp-route-id="@Model.Property.Id" class="btn btn-secondary">Edit Units</a>
         }
     </div>
 </div>
