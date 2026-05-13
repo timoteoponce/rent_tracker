@@ -5,9 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - RentTracker</title>
     <meta name="theme-color" content="#2563eb" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="RentTracker" />
     <link rel="manifest" href="~/manifest.json" />
     <link rel="icon" href="~/icons/icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="~/icons/icon.svg" />
+    <link rel="apple-touch-icon" href="~/icons/icon-192.png" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
@@ -57,8 +60,50 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
     <script>
+        // Service Worker registration with update banner support
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/js/sw.js');
+            navigator.serviceWorker.register('/js/sw.js').then(function(reg) {
+                // Check for updates when the page loads
+                reg.addEventListener('updatefound', function() {
+                    var newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', function() {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // New version available — show refresh banner
+                            showUpdateBanner();
+                        }
+                    });
+                });
+
+                // Also check periodically (every 60 minutes) for updates
+                setInterval(function() {
+                    reg.update();
+                }, 60 * 60 * 1000);
+            });
+
+            // Listen for messages from the service worker
+            navigator.serviceWorker.addEventListener('message', function(event) {
+                if (event.data && event.data.type === 'UPDATE_CHECKED') {
+                    // Optional: update UI based on check result
+                }
+            });
+        }
+
+        // Show a non-intrusive banner prompting the user to refresh
+        function showUpdateBanner() {
+            var banner = document.createElement('div');
+            banner.id = 'sw-update-banner';
+            banner.innerHTML =
+                '<span>An update is available. Refresh to get the latest version.</span>' +
+                '<button onclick="window.location.reload()">Refresh</button>';
+            banner.style.cssText =
+                'position:fixed;bottom:0;left:0;right:0;background:#2563eb;color:#fff;' +
+                'padding:0.75rem 1rem;display:flex;justify-content:space-between;' +
+                'align-items:center;z-index:9999;font-family:system-ui,sans-serif;' +
+                'font-size:0.9rem;box-shadow:0 -2px 8px rgba(0,0,0,0.2);';
+            banner.querySelector('button').style.cssText =
+                'background:#fff;color:#2563eb;border:none;border-radius:0.25rem;' +
+                'padding:0.4rem 0.8rem;font-weight:600;cursor:pointer;font-family:inherit;';
+            document.body.appendChild(banner);
         }
     </script>
 </body>

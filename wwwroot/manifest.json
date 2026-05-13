@@ -1,8 +1,10 @@
 {
   "name": "RentTracker",
   "short_name": "RentTracker",
+  "id": "/",
   "description": "Rental property management tracker",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#f3f4f6",
   "theme_color": "#2563eb",
