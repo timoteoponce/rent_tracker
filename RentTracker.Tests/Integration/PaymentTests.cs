@@ -181,4 +181,42 @@ public class PaymentTests : IClassFixture<CustomWebApplicationFactory>
             Assert.Contains("Bs. 2,000.00", content);
         }
     }
+
+    [Fact]
+    public async Task DeletePayment_Succeeds()
+    {
+        var (property, tenant, lease, client) = await SetupAsync();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<RentTrackerDbContext>();
+            var payment = new Payment
+            {
+                LeaseId = lease.Id,
+                Amount = 2000m,
+                Currency = "BOB",
+                ForPeriod = new DateTimeOffset(DateTimeOffset.UtcNow.Year, DateTimeOffset.UtcNow.Month, 1, 0, 0, 0, TimeSpan.Zero),
+                PaymentDate = DateTimeOffset.UtcNow,
+                Status = PaymentStatus.Received,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            db.Payments.Add(payment);
+            await db.SaveChangesAsync();
+
+            var indexPage = await client.GetAsync("/Payments");
+            var token = CustomWebApplicationFactory.ExtractAntiForgeryToken(await indexPage.Content.ReadAsStringAsync());
+
+            var response = await client.PostAsync($"/Payments?handler=Delete&id={payment.Id}", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = token,
+                ["id"] = payment.Id.ToString()
+            }));
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+
+            db.ChangeTracker.Clear();
+            var deleted = await db.Payments.FindAsync(payment.Id);
+            Assert.Null(deleted);
+        }
+    }
 }

@@ -227,4 +227,151 @@ public class UserTests : IClassFixture<CustomWebApplicationFactory>
         var content = await indexPage.Content.ReadAsStringAsync();
         Assert.Contains("User Management", content);
     }
+
+    [Fact]
+    public async Task DeleteUser_BlockedWhenLinkedToLease()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync(UserRoles.Administrator);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<RentTrackerDbContext>();
+            await db.Database.EnsureCreatedAsync();
+
+            var tenant = new User
+            {
+                Username = Unique("linkedtenant"),
+                Email = "linked@test.ch",
+                FullName = "Linked Tenant",
+                Role = UserRoles.Tenant,
+                PasswordHash = Web.Program.HashPassword("password123"),
+                IsActive = true,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            db.Users.Add(tenant);
+
+            var owner = db.Users.First(u => u.Username.StartsWith("test-"));
+            var property = new Property
+            {
+                Name = Unique("LinkedProp"),
+                CurrentPrice = 1000m,
+                CurrentWarranty = 2000m,
+                IsEnabled = true,
+                LastEditedById = owner.Id,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            db.Properties.Add(property);
+            await db.SaveChangesAsync();
+
+            var lease = new Lease
+            {
+                PropertyId = property.Id,
+                TenantId = tenant.Id,
+                AgreedPrice = 1000m,
+                AgreedWarranty = 2000m,
+                StartDate = DateTimeOffset.UtcNow,
+                Status = LeaseStatus.Active,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            db.Leases.Add(lease);
+            await db.SaveChangesAsync();
+
+            var indexPage = await client.GetAsync("/Users");
+            var token = CustomWebApplicationFactory.ExtractAntiForgeryToken(await indexPage.Content.ReadAsStringAsync());
+
+            var response = await client.PostAsync($"/Users?handler=Delete&id={tenant.Id}", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = token,
+                ["id"] = tenant.Id.ToString()
+            }));
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+
+            db.ChangeTracker.Clear();
+            var stillExists = await db.Users.FindAsync(tenant.Id);
+            Assert.NotNull(stillExists);
+        }
+    }
+
+    [Fact]
+    public async Task DeleteUser_SucceedsWhenNoLeases()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync(UserRoles.Administrator);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<RentTrackerDbContext>();
+            await db.Database.EnsureCreatedAsync();
+
+            var user = new User
+            {
+                Username = Unique("orphanuser"),
+                Email = "orphan@test.ch",
+                FullName = "Orphan User",
+                Role = UserRoles.Tenant,
+                PasswordHash = Web.Program.HashPassword("password123"),
+                IsActive = true,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            db.Users.Add(user);
+            await db.SaveChangesAsync();
+
+            var indexPage = await client.GetAsync("/Users");
+            var token = CustomWebApplicationFactory.ExtractAntiForgeryToken(await indexPage.Content.ReadAsStringAsync());
+
+            var response = await client.PostAsync($"/Users?handler=Delete&id={user.Id}", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = token,
+                ["id"] = user.Id.ToString()
+            }));
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+
+            db.ChangeTracker.Clear();
+            var deleted = await db.Users.FindAsync(user.Id);
+            Assert.Null(deleted);
+        }
+    }
+
+    [Fact]
+    public async Task DeleteAdminUser_Blocked()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync(UserRoles.Administrator);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<RentTrackerDbContext>();
+            await db.Database.EnsureCreatedAsync();
+
+            // Seed an admin user
+            var admin = new User
+            {
+                Username = Unique("adminuser"),
+                Email = "admin@test.ch",
+                FullName = "Test Admin",
+                Role = UserRoles.Administrator,
+                PasswordHash = Web.Program.HashPassword("password123"),
+                IsActive = true,
+                IsSystemUser = true,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            db.Users.Add(admin);
+            await db.SaveChangesAsync();
+
+            var indexPage = await client.GetAsync("/Users");
+            var token = CustomWebApplicationFactory.ExtractAntiForgeryToken(await indexPage.Content.ReadAsStringAsync());
+
+            var response = await client.PostAsync($"/Users?handler=Delete&id={admin.Id}", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = token,
+                ["id"] = admin.Id.ToString()
+            }));
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+
+            db.ChangeTracker.Clear();
+            var stillExists = await db.Users.FindAsync(admin.Id);
+            Assert.NotNull(stillExists);
+        }
+    }
 }

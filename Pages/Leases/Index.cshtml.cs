@@ -65,7 +65,10 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteAsync(Guid id)
     {
-        var lease = await _context.Leases.FindAsync(id);
+        var lease = await _context.Leases
+            .Include(l => l.Property)
+            .FirstOrDefaultAsync(l => l.Id == id);
+
         if (lease == null)
         {
             return NotFound();

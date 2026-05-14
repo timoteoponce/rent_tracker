@@ -254,4 +254,92 @@ public class LeaseTests : IClassFixture<CustomWebApplicationFactory>
             Assert.Equal(5000m, updated.AgreedWarranty);
         }
     }
+
+    [Fact]
+    public async Task DeleteLease_BlockedWhenLinkedToPayments()
+    {
+        var (property, tenant, client) = await SetupPropertyAndTenantAsync();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<RentTrackerDbContext>();
+            var lease = new Lease
+            {
+                PropertyId = property.Id,
+                TenantId = tenant.Id,
+                AgreedPrice = 2000m,
+                AgreedWarranty = 4000m,
+                StartDate = DateTimeOffset.UtcNow.AddMonths(-2),
+                Status = LeaseStatus.Active,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            db.Leases.Add(lease);
+
+            var payment = new Payment
+            {
+                LeaseId = lease.Id,
+                Amount = 2000m,
+                Currency = "BOB",
+                ForPeriod = new DateTimeOffset(DateTimeOffset.UtcNow.Year, DateTimeOffset.UtcNow.Month, 1, 0, 0, 0, TimeSpan.Zero),
+                PaymentDate = DateTimeOffset.UtcNow,
+                Status = PaymentStatus.Received,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            db.Payments.Add(payment);
+            await db.SaveChangesAsync();
+
+            var indexPage = await client.GetAsync("/Leases");
+            var token = CustomWebApplicationFactory.ExtractAntiForgeryToken(await indexPage.Content.ReadAsStringAsync());
+
+            var response = await client.PostAsync($"/Leases?handler=Delete&id={lease.Id}", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = token,
+                ["id"] = lease.Id.ToString()
+            }));
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+
+            db.ChangeTracker.Clear();
+            var stillExists = await db.Leases.FindAsync(lease.Id);
+            Assert.NotNull(stillExists);
+        }
+    }
+
+    [Fact]
+    public async Task DeleteLease_SucceedsWhenNoPayments()
+    {
+        var (property, tenant, client) = await SetupPropertyAndTenantAsync();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<RentTrackerDbContext>();
+            var lease = new Lease
+            {
+                PropertyId = property.Id,
+                TenantId = tenant.Id,
+                AgreedPrice = 2000m,
+                AgreedWarranty = 4000m,
+                StartDate = DateTimeOffset.UtcNow.AddMonths(-2),
+                Status = LeaseStatus.Active,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            db.Leases.Add(lease);
+            await db.SaveChangesAsync();
+
+            var indexPage = await client.GetAsync("/Leases");
+            var token = CustomWebApplicationFactory.ExtractAntiForgeryToken(await indexPage.Content.ReadAsStringAsync());
+
+            var response = await client.PostAsync($"/Leases?handler=Delete&id={lease.Id}", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = token,
+                ["id"] = lease.Id.ToString()
+            }));
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+
+            db.ChangeTracker.Clear();
+            var deleted = await db.Leases.FindAsync(lease.Id);
+            Assert.Null(deleted);
+        }
+    }
 }

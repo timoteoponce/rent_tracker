@@ -280,4 +280,114 @@ public class PropertyTests : IClassFixture<CustomWebApplicationFactory>
             Assert.Empty(units);
         }
     }
+
+    [Fact]
+    public async Task DeleteProperty_BlockedWhenLinkedToLease()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync(UserRoles.Owner);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<RentTrackerDbContext>();
+            await db.Database.EnsureCreatedAsync();
+            var user = db.Users.First(u => u.Username.StartsWith("test-"));
+
+            var property = new Property
+            {
+                Name = Unique("DeleteBlocked"),
+                CurrentPrice = 1000m,
+                CurrentWarranty = 2000m,
+                IsEnabled = true,
+                LastEditedById = user.Id,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            db.Properties.Add(property);
+
+            var tenant = new User
+            {
+                Username = Unique("tenant"),
+                Email = $"{Unique("tenant")}@test.ch",
+                FullName = "Test Tenant",
+                Role = UserRoles.Tenant,
+                PasswordHash = Web.Program.HashPassword("password123"),
+                IsActive = true,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            db.Users.Add(tenant);
+            await db.SaveChangesAsync();
+
+            var lease = new Lease
+            {
+                PropertyId = property.Id,
+                TenantId = tenant.Id,
+                AgreedPrice = 1000m,
+                AgreedWarranty = 2000m,
+                StartDate = DateTimeOffset.UtcNow,
+                Status = LeaseStatus.Active,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            db.Leases.Add(lease);
+            await db.SaveChangesAsync();
+
+            var indexPage = await client.GetAsync("/Properties");
+            var token = CustomWebApplicationFactory.ExtractAntiForgeryToken(await indexPage.Content.ReadAsStringAsync());
+
+            var response = await client.PostAsync($"/Properties?handler=Delete&id={property.Id}", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = token,
+                ["id"] = property.Id.ToString()
+            }));
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+
+            db.ChangeTracker.Clear();
+            var stillExists = await db.Properties.FindAsync(property.Id);
+            Assert.NotNull(stillExists);
+
+            // Verify error message is shown on redirect
+            var redirectTarget = response.Headers.Location?.ToString();
+            Assert.NotNull(redirectTarget);
+            Assert.Contains("/Properties", redirectTarget);
+        }
+    }
+
+    [Fact]
+    public async Task DeleteProperty_SucceedsWhenNoLeases()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync(UserRoles.Owner);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<RentTrackerDbContext>();
+            await db.Database.EnsureCreatedAsync();
+            var user = db.Users.First(u => u.Username.StartsWith("test-"));
+
+            var property = new Property
+            {
+                Name = Unique("DeleteOk"),
+                CurrentPrice = 1000m,
+                CurrentWarranty = 2000m,
+                IsEnabled = true,
+                LastEditedById = user.Id,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            db.Properties.Add(property);
+            await db.SaveChangesAsync();
+
+            var indexPage = await client.GetAsync("/Properties");
+            var token = CustomWebApplicationFactory.ExtractAntiForgeryToken(await indexPage.Content.ReadAsStringAsync());
+
+            var response = await client.PostAsync($"/Properties?handler=Delete&id={property.Id}", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = token,
+                ["id"] = property.Id.ToString()
+            }));
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+
+            db.ChangeTracker.Clear();
+            var deleted = await db.Properties.FindAsync(property.Id);
+            Assert.Null(deleted);
+        }
+    }
 }
