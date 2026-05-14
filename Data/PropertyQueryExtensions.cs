@@ -49,7 +49,8 @@ public static class PropertyQueryExtensions
         // Owners: see leases on public properties, or on private properties they last-edited
         if (isTenant)
         {
-            return query.Where(l => l.TenantId == userId);
+            // Use .Value to compare Guid (not Guid?) for reliable EF Core translation
+            return query.Where(l => l.TenantId == userId.Value);
         }
 
         // For Owners: public properties are always visible, private only if they are the last editor
@@ -75,7 +76,8 @@ public static class PropertyQueryExtensions
         // Tenants: always see payments on their own leases
         if (isTenant)
         {
-            return query.Where(p => p.Lease.TenantId == userId);
+            // Use .Value to compare Guid (not Guid?) for reliable EF Core translation
+            return query.Where(p => p.Lease.TenantId == userId.Value);
         }
 
         // For Owners: public properties are always visible, private only if they are the last editor

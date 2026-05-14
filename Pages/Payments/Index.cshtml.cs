@@ -41,8 +41,18 @@ public class IndexModel : PageModel
             query = query.Where(p => p.Status == StatusFilter);
         }
 
-        // Apply visibility filtering (replaces the old tenant-only filter)
-        query = query.VisibleToUser(userId, isAdmin, isTenant);
+        // Apply visibility filtering
+        if (isTenant && userId.HasValue)
+        {
+            // Tenants: only payments on their own leases
+            // Use explicit Guid (not Guid?) for reliable EF Core translation
+            query = query.Where(p => p.Lease.TenantId == userId.Value);
+        }
+        else if (!isAdmin)
+        {
+            // Owners: all payments on public properties + their own private properties
+            query = query.Where(p => !p.Lease.Property.IsPrivate || p.Lease.Property.LastEditedById == userId);
+        }
 
         // Fetch data first, then sort in memory (SQLite DateTimeOffset workaround)
         var paymentsList = await query.ToListAsync();

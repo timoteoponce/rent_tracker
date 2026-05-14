@@ -41,7 +41,16 @@ public class IndexModel : PageModel
         }
 
         // Apply visibility filtering
-        query = query.VisibleToUser(userId, isAdmin, isTenant);
+        if (isTenant && userId.HasValue)
+        {
+            // Tenants: only their own leases
+            query = query.Where(l => l.TenantId == userId.Value);
+        }
+        else if (!isAdmin)
+        {
+            // Owners: all leases on public properties + their own private properties
+            query = query.Where(l => !l.Property.IsPrivate || l.Property.LastEditedById == userId);
+        }
 
         // Fetch data first, then sort in memory (SQLite DateTimeOffset workaround)
         var leasesList = await query.ToListAsync();

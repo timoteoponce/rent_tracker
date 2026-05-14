@@ -16,7 +16,10 @@
                 @if (User.Identity?.IsAuthenticated == true)
                 {
                     <a asp-page="/Index">Dashboard</a>
-                    <a asp-page="/Properties/Index">Properties</a>
+                    @if (User.IsInRole(UserRoles.Administrator) || User.IsInRole(UserRoles.Owner))
+                    {
+                        <a asp-page="/Properties/Index">Properties</a>
+                    }
                     <a asp-page="/Leases/Index">Leases</a>
                     <a asp-page="/Payments/Index">Payments</a>
                     @if (User.IsInRole(UserRoles.Administrator) || User.IsInRole(UserRoles.Owner))
