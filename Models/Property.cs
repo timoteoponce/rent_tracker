@@ -57,11 +57,24 @@ public class Property
 
     public DateTimeOffset? UpdatedAt { get; set; }
 
+    /// <summary>
+    /// If true, only the last editor and administrators can see this property and its leases/payments.
+    /// If false (default), the property is visible to all authenticated users.
+    /// </summary>
+    public bool IsPrivate { get; set; } = false;
+
     // Foreign keys
     public Guid? OwnerId { get; set; }
 
+    /// <summary>
+    /// The user who last edited this property. Controls who can toggle the IsPrivate flag.
+    /// If null, the privacy option is not available in the UI.
+    /// </summary>
+    public Guid? LastEditedById { get; set; }
+
     // Navigation properties
     public User? Owner { get; set; }
+    public User? LastEditedBy { get; set; }
     public ICollection<PropertyUnit> Units { get; set; } = new List<PropertyUnit>();
     public ICollection<Lease> Leases { get; set; } = new List<Lease>();
     public ICollection<PropertyPriceHistory> PriceHistory { get; set; } = new List<PropertyPriceHistory>();

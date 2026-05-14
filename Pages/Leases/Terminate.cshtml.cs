@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
+using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
 using System.ComponentModel.DataAnnotations;
 
@@ -40,6 +41,15 @@ public class TerminateModel : PageModel
             return NotFound();
         }
 
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+        var isTenant = User.IsInRole(UserRoles.Tenant);
+
+        if (!AuthorizationHelper.CanViewLease(Lease, userId, isAdmin, isTenant))
+        {
+            return Forbid();
+        }
+
         if (Lease.Status != LeaseStatus.Active)
         {
             return RedirectToPage("./Details", new { id });
@@ -50,18 +60,27 @@ public class TerminateModel : PageModel
 
     public async Task<IActionResult> OnPostAsync(Guid id)
     {
+        Lease = await _context.Leases
+            .Include(l => l.Property)
+            .Include(l => l.Tenant)
+            .FirstOrDefaultAsync(l => l.Id == id);
+
+        if (Lease == null)
+        {
+            return NotFound();
+        }
+
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+        var isTenant = User.IsInRole(UserRoles.Tenant);
+
+        if (!AuthorizationHelper.CanViewLease(Lease, userId, isAdmin, isTenant))
+        {
+            return Forbid();
+        }
+
         if (!ModelState.IsValid)
         {
-            Lease = await _context.Leases
-                .Include(l => l.Property)
-                .Include(l => l.Tenant)
-                .FirstOrDefaultAsync(l => l.Id == id);
-
-            if (Lease == null)
-            {
-                return NotFound();
-            }
-
             return Page();
         }
 

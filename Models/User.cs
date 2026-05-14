@@ -41,6 +41,7 @@ public class User
 
     // Navigation properties
     public ICollection<Property> OwnedProperties { get; set; } = new List<Property>();
+    public ICollection<Property> LastEditedProperties { get; set; } = new List<Property>();
     public ICollection<Lease> Leases { get; set; } = new List<Lease>();
 }
 

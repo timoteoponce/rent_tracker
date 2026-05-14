@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
+using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
 
 namespace RentTracker.Web.Pages.Properties;
@@ -25,6 +26,14 @@ public class ToggleStatusModel : PageModel
             return NotFound();
         }
 
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+
+        if (!AuthorizationHelper.CanEditProperty(property, userId, isAdmin))
+        {
+            return Forbid();
+        }
+
         // Check if property has active leases before disabling
         if (property.IsEnabled)
         {
@@ -40,6 +49,12 @@ public class ToggleStatusModel : PageModel
 
         property.IsEnabled = !property.IsEnabled;
         property.UpdatedAt = DateTimeOffset.UtcNow;
+
+        // Update the last editor so they retain control over the privacy flag
+        if (userId.HasValue)
+        {
+            property.LastEditedById = userId.Value;
+        }
 
         await _context.SaveChangesAsync();
 

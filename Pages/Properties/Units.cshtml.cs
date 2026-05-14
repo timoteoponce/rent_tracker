@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
+using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
 
 namespace RentTracker.Web.Pages.Properties;
@@ -29,6 +30,14 @@ public class UnitsModel : PageModel
             return NotFound();
         }
 
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+
+        if (!AuthorizationHelper.CanEditProperty(Property, userId, isAdmin))
+        {
+            return Forbid();
+        }
+
         Units = await _context.PropertyUnits
             .Where(u => u.PropertyId == id)
             .OrderBy(u => u.Name)
@@ -39,15 +48,23 @@ public class UnitsModel : PageModel
 
     public async Task<IActionResult> OnPostAddUnitAsync(Guid propertyId, string unitName, string? unitDescription, decimal unitPrice, decimal unitWarranty)
     {
-        if (string.IsNullOrWhiteSpace(unitName) || unitPrice <= 0)
-        {
-            return RedirectToPage(new { id = propertyId });
-        }
-
         var property = await _context.Properties.FindAsync(propertyId);
         if (property == null || !property.CanBeLeasedByUnits)
         {
             return NotFound();
+        }
+
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+
+        if (!AuthorizationHelper.CanEditProperty(property, userId, isAdmin))
+        {
+            return Forbid();
+        }
+
+        if (string.IsNullOrWhiteSpace(unitName) || unitPrice <= 0)
+        {
+            return RedirectToPage(new { id = propertyId });
         }
 
         // Check if unit name already exists for this property
@@ -79,6 +96,20 @@ public class UnitsModel : PageModel
 
     public async Task<IActionResult> OnPostDeleteUnitAsync(Guid propertyId, Guid unitId)
     {
+        var property = await _context.Properties.FindAsync(propertyId);
+        if (property == null)
+        {
+            return NotFound();
+        }
+
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+
+        if (!AuthorizationHelper.CanEditProperty(property, userId, isAdmin))
+        {
+            return Forbid();
+        }
+
         var unit = await _context.PropertyUnits.FindAsync(unitId);
         if (unit == null || unit.PropertyId != propertyId)
         {

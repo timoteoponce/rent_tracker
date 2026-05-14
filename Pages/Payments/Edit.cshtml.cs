@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
+using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
 
 namespace RentTracker.Web.Pages.Payments;
@@ -39,6 +40,15 @@ public class EditModel : PageModel
             return NotFound();
         }
 
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+        var isTenant = User.IsInRole(UserRoles.Tenant);
+
+        if (!AuthorizationHelper.CanViewPayment(OriginalPayment, userId, isAdmin, isTenant))
+        {
+            return Forbid();
+        }
+
         OriginalPaymentId = OriginalPayment.Id;
 
         // Pre-fill new payment with original values
@@ -58,37 +68,39 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        if (!ModelState.IsValid)
-        {
-            // Reload original payment for display
-            OriginalPayment = await _context.Payments
-                .Include(p => p.Lease)
-                .ThenInclude(l => l.Property)
-                .Include(p => p.Lease)
-                .ThenInclude(l => l.Tenant)
-                .FirstOrDefaultAsync(p => p.Id == OriginalPaymentId);
+        // Reload original payment for display
+        OriginalPayment = await _context.Payments
+            .Include(p => p.Lease)
+            .ThenInclude(l => l.Property)
+            .Include(p => p.Lease)
+            .ThenInclude(l => l.Tenant)
+            .FirstOrDefaultAsync(p => p.Id == OriginalPaymentId);
 
-            if (OriginalPayment == null)
-            {
-                return NotFound();
-            }
-
-            return Page();
-        }
-
-        // Get original payment
-        var originalPayment = await _context.Payments.FindAsync(OriginalPaymentId);
-        if (originalPayment == null)
+        if (OriginalPayment == null)
         {
             return NotFound();
+        }
+
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+        var isTenant = User.IsInRole(UserRoles.Tenant);
+
+        if (!AuthorizationHelper.CanViewPayment(OriginalPayment, userId, isAdmin, isTenant))
+        {
+            return Forbid();
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return Page();
         }
 
         // Create new payment record
         Payment.CreatedAt = DateTimeOffset.UtcNow;
         Payment.PreviousPaymentId = OriginalPaymentId;
         // ForPeriod stays the same as original
-        Payment.ForPeriod = originalPayment.ForPeriod;
-        Payment.LeaseId = originalPayment.LeaseId;
+        Payment.ForPeriod = OriginalPayment.ForPeriod;
+        Payment.LeaseId = OriginalPayment.LeaseId;
 
         _context.Payments.Add(Payment);
         await _context.SaveChangesAsync();

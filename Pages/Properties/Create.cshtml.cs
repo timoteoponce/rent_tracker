@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
+using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
 
 namespace RentTracker.Web.Pages.Properties;
@@ -30,14 +31,34 @@ public class CreateModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        ModelState.Remove("Property.Owner");
-        ModelState.Remove("Property.Units");
-        ModelState.Remove("Property.Leases");
-        ModelState.Remove("Property.PriceHistory");
+        // Remove validation for navigation properties - only FK IDs are submitted from form
+        // Use prefix matching because complex navigation properties generate nested ModelState keys
+        // Also remove UnitInputs because the form always submits an empty row even when hidden,
+        // and the code manually validates unit data (skipping empty names).
+        var keysToRemove = ModelState.Keys
+            .Where(k => k.StartsWith("Property.Owner") ||
+                        k.StartsWith("Property.LastEditedBy") ||
+                        k.StartsWith("Property.Units") ||
+                        k.StartsWith("Property.Leases") ||
+                        k.StartsWith("Property.PriceHistory") ||
+                        k.StartsWith("UnitInputs"))
+            .ToList();
+
+        foreach (var key in keysToRemove)
+        {
+            ModelState.Remove(key);
+        }
 
         if (!ModelState.IsValid)
         {
             return Page();
+        }
+
+        // Set the creator as the last editor so they can toggle privacy later
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        if (userId.HasValue)
+        {
+            Property.LastEditedById = userId.Value;
         }
 
         var validInputs = UnitInputs.Where(u => u != null).ToList();

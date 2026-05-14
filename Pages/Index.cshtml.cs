@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
+using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
 
 namespace RentTracker.Web.Pages;
@@ -26,18 +27,34 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        // Get counts
-        TotalProperties = await _context.Properties
-            .CountAsync(p => p.IsEnabled);
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+        var isTenant = User.IsInRole(UserRoles.Tenant);
+
+        // Get counts - filtered by visibility
+        var visibleProperties = await _context.Properties
+            .VisibleToUser(userId, isAdmin)
+            .Where(p => p.IsEnabled)
+            .ToListAsync();
+        TotalProperties = visibleProperties.Count;
         
-        ActiveLeases = await _context.Leases
-            .CountAsync(l => l.Status == LeaseStatus.Active);
+        var visibleActiveLeases = await _context.Leases
+            .Include(l => l.Property)
+            .Where(l => l.Status == LeaseStatus.Active)
+            .VisibleToUser(userId, isAdmin, isTenant)
+            .ToListAsync();
+        ActiveLeases = visibleActiveLeases.Count;
         
         TotalTenants = await _context.Users
             .CountAsync(u => u.Role == UserRoles.Tenant && u.IsActive);
         
-        PendingPayments = await _context.Payments
-            .CountAsync(p => p.Status == PaymentStatus.Pending);
+        var visiblePendingPayments = await _context.Payments
+            .Include(p => p.Lease)
+            .ThenInclude(l => l.Property)
+            .Where(p => p.Status == PaymentStatus.Pending)
+            .VisibleToUser(userId, isAdmin, isTenant)
+            .ToListAsync();
+        PendingPayments = visiblePendingPayments.Count;
 
         // Get recent payments with related data
         // NOTE: Using client-side ordering because SQLite doesn't support DateTimeOffset in ORDER BY
@@ -46,6 +63,7 @@ public class IndexModel : PageModel
             .ThenInclude(l => l.Property)
             .Include(p => p.Lease)
             .ThenInclude(l => l.Tenant)
+            .VisibleToUser(userId, isAdmin, isTenant)
             .Take(50)  // Take more than needed, then sort in memory
             .ToListAsync();
         
@@ -60,6 +78,7 @@ public class IndexModel : PageModel
             .Include(l => l.Property)
             .Include(l => l.Tenant)
             .Where(l => l.Status == LeaseStatus.Active)
+            .VisibleToUser(userId, isAdmin, isTenant)
             .ToListAsync();
         
         ActiveLeasesList = activeLeasesQuery

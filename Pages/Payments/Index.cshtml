@@ -6,7 +6,10 @@
 
 <div class="page-header">
     <h2>Payments</h2>
-    <a asp-page="./Create" class="btn btn-primary">Add Payment</a>
+    @if (User.IsInRole("Administrator") || User.IsInRole("Owner"))
+    {
+        <a asp-page="./Create" class="btn btn-primary">Add Payment</a>
+    }
 </div>
 
 <div class="page-content">
@@ -66,6 +69,6 @@
     }
     else
     {
-        <p class="text-muted">No payments found. <a asp-page="./Create">Add your first payment</a>.</p>
+        <p class="text-muted">No payments found.</p>
     }
 </div>

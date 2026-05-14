@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
+using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
 
 namespace RentTracker.Web.Pages.Payments;
@@ -51,6 +52,26 @@ public class CreateModel : PageModel
             return Page();
         }
 
+        // Verify user can view the lease's property before creating a payment
+        var lease = await _context.Leases
+            .Include(l => l.Property)
+            .FirstOrDefaultAsync(l => l.Id == Payment.LeaseId);
+
+        if (lease == null)
+        {
+            ModelState.AddModelError("", "Lease not found.");
+            await LoadSelectListsAsync();
+            return Page();
+        }
+
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+
+        if (!AuthorizationHelper.CanViewProperty(lease.Property, userId, isAdmin))
+        {
+            return Forbid();
+        }
+
         // Check for existing payment for same period
         // NOTE: Fetch and filter client-side because SQLite doesn't support DateTimeOffset.Year/Month in LINQ
         var existingPaymentsForLease = await _context.Payments
@@ -79,11 +100,16 @@ public class CreateModel : PageModel
 
     private async Task LoadSelectListsAsync()
     {
-        // Get active leases with property and tenant info
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+        var isTenant = User.IsInRole(UserRoles.Tenant);
+
+        // Get active leases with property and tenant info, filtered by visibility
         var leases = await _context.Leases
             .Include(l => l.Property)
             .Include(l => l.Tenant)
             .Where(l => l.Status == LeaseStatus.Active)
+            .VisibleToUser(userId, isAdmin, isTenant)
             .ToListAsync();
 
         var leaseList = leases.Select(l => new
@@ -98,11 +124,20 @@ public class CreateModel : PageModel
     public async Task<IActionResult> OnGetLeaseDetailsAsync(Guid leaseId)
     {
         var lease = await _context.Leases
+            .Include(l => l.Property)
             .FirstOrDefaultAsync(l => l.Id == leaseId && l.Status == LeaseStatus.Active);
 
         if (lease == null)
         {
             return new JsonResult(new { agreedPrice = (decimal)0 });
+        }
+
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+
+        if (!AuthorizationHelper.CanViewProperty(lease.Property, userId, isAdmin))
+        {
+            return Forbid();
         }
 
         return new JsonResult(new { agreedPrice = lease.AgreedPrice });

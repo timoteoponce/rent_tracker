@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
+using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
 
 namespace RentTracker.Web.Pages.Leases;
@@ -37,10 +38,16 @@ public class CreateModel : PageModel
                 .FirstOrDefaultAsync(u => u.Id == unitId.Value);
             if (unit != null)
             {
-                Lease.PropertyId = unit.PropertyId;
-                Lease.PropertyUnitId = unitId.Value;
-                Lease.AgreedPrice = unit.Price;
-                Lease.AgreedWarranty = unit.Warranty;
+                // Guard: verify user can view this property
+                var userId = AuthorizationHelper.GetCurrentUserId(User);
+                var isAdmin = User.IsInRole(UserRoles.Administrator);
+                if (AuthorizationHelper.CanViewProperty(unit.Property, userId, isAdmin))
+                {
+                    Lease.PropertyId = unit.PropertyId;
+                    Lease.PropertyUnitId = unitId.Value;
+                    Lease.AgreedPrice = unit.Price;
+                    Lease.AgreedWarranty = unit.Warranty;
+                }
             }
         }
         else if (propertyId.HasValue)
@@ -48,9 +55,14 @@ public class CreateModel : PageModel
             var unitless = await _context.Properties.FindAsync(propertyId.Value);
             if (unitless != null)
             {
-                Lease.PropertyId = propertyId.Value;
-                Lease.AgreedPrice = unitless.CurrentPrice;
-                Lease.AgreedWarranty = unitless.CurrentWarranty;
+                var userId = AuthorizationHelper.GetCurrentUserId(User);
+                var isAdmin = User.IsInRole(UserRoles.Administrator);
+                if (AuthorizationHelper.CanViewProperty(unitless, userId, isAdmin))
+                {
+                    Lease.PropertyId = propertyId.Value;
+                    Lease.AgreedPrice = unitless.CurrentPrice;
+                    Lease.AgreedWarranty = unitless.CurrentWarranty;
+                }
             }
         }
 
@@ -79,6 +91,14 @@ public class CreateModel : PageModel
             ModelState.AddModelError("", "Property not found.");
             await LoadSelectListsAsync();
             return Page();
+        }
+
+        // Guard: verify user can view this property before creating a lease
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+        if (!AuthorizationHelper.CanViewProperty(property, userId, isAdmin))
+        {
+            return Forbid();
         }
 
         // Validate based on unit vs whole property
@@ -176,6 +196,13 @@ public class CreateModel : PageModel
             });
         }
 
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+        if (!AuthorizationHelper.CanViewProperty(property, userId, isAdmin))
+        {
+            return Forbid();
+        }
+
         var units = property.CanBeLeasedByUnits 
             ? property.Units.Select(u => new { 
                 id = u.Id, 
@@ -195,65 +222,44 @@ public class CreateModel : PageModel
 
     private async Task LoadSelectListsAsync()
     {
-        var availableProperties = await _context.Properties
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+
+        // Get visible properties for the dropdown
+        var properties = await _context.Properties
+            .VisibleToUser(userId, isAdmin)
             .Where(p => p.IsEnabled)
+            .OrderBy(p => p.Name)
             .ToListAsync();
+        AvailableProperties = new SelectList(properties, "Id", "Name");
 
-        var propertyList = new List<Property>();
-        foreach (var prop in availableProperties)
-        {
-            if (prop.CanBeLeasedByUnits)
-            {
-                var hasUnits = await _context.PropertyUnits
-                    .AnyAsync(u => u.PropertyId == prop.Id);
-                
-                var wholePropertyLeased = await _context.Leases
-                    .AnyAsync(l => l.PropertyId == prop.Id && 
-                                   l.Status == LeaseStatus.Active && 
-                                   l.PropertyUnitId == null);
-
-                if (hasUnits || !wholePropertyLeased)
-                {
-                    propertyList.Add(prop);
-                }
-            }
-            else
-            {
-                var hasActiveLease = await _context.Leases
-                    .AnyAsync(l => l.PropertyId == prop.Id && l.Status == LeaseStatus.Active);
-                
-                if (!hasActiveLease)
-                {
-                    propertyList.Add(prop);
-                }
-            }
-        }
-
-        AvailableProperties = new SelectList(propertyList, "Id", "Name");
-
-        var tenants = await _context.Users
-            .Where(u => u.Role == UserRoles.Tenant && u.IsActive)
-            .ToListAsync();
-        AvailableTenants = new SelectList(tenants, "Id", "FullName");
-
-        // Pre-populate units if a property is selected
+        // Get units for the selected property (if any)
         if (Lease.PropertyId != Guid.Empty)
         {
-            var prop = propertyList.FirstOrDefault(p => p.Id == Lease.PropertyId);
-            if (prop != null && prop.CanBeLeasedByUnits)
+            var units = await _context.PropertyUnits
+                .Where(u => u.PropertyId == Lease.PropertyId && u.IsAvailable)
+                .OrderBy(u => u.Name)
+                .ToListAsync();
+
+            // If a unit is already selected, include it even if not available
+            if (Lease.PropertyUnitId.HasValue)
             {
-                var units = await _context.PropertyUnits
-                    .Where(u => u.PropertyId == Lease.PropertyId)
-                    .ToListAsync();
-
-                AvailableUnits = new SelectList(
-                    units.OrderBy(u => u.Name),
-                    "Id",
-                    "Name",
-                    Lease.PropertyUnitId);
-
-                ShowUnitSection = prop.CanBeLeasedByUnits && units.Any();
+                var selectedUnit = await _context.PropertyUnits.FindAsync(Lease.PropertyUnitId.Value);
+                if (selectedUnit != null && !units.Any(u => u.Id == selectedUnit.Id))
+                {
+                    units.Add(selectedUnit);
+                }
             }
+
+            AvailableUnits = new SelectList(units, "Id", "Name");
+            ShowUnitSection = units.Any();
         }
+
+        // Get active tenants
+        var tenants = await _context.Users
+            .Where(u => u.Role == UserRoles.Tenant && u.IsActive)
+            .OrderBy(u => u.FullName)
+            .ToListAsync();
+        AvailableTenants = new SelectList(tenants, "Id", "FullName");
     }
 }

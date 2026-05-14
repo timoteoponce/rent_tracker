@@ -110,6 +110,20 @@
             }
         </div>
 
+        @if (Model.CanTogglePrivacyFlag)
+        {
+            <div class="form-group">
+                <div class="form-check">
+                    <input asp-for="Property.IsPrivate" type="checkbox" class="form-check-input" id="isPrivate" />
+                    <label asp-for="Property.IsPrivate" class="form-check-label">Private property (only visible to me and administrators)</label>
+                </div>
+            </div>
+        }
+        else
+        {
+            <input type="hidden" asp-for="Property.IsPrivate" />
+        }
+
         <div id="unitsSection" class="card" style="display: none;">
             <div class="card-header">
                 <h4 class="card-title">Units</h4>

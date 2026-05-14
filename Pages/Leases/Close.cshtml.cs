@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
+using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
 
 namespace RentTracker.Web.Pages.Leases;
@@ -34,6 +35,15 @@ public class CloseModel : PageModel
             return NotFound();
         }
 
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+        var isTenant = User.IsInRole(UserRoles.Tenant);
+
+        if (!AuthorizationHelper.CanViewLease(Lease, userId, isAdmin, isTenant))
+        {
+            return Forbid();
+        }
+
         if (Lease.Status != LeaseStatus.Active)
         {
             return RedirectToPage("./Details", new { id });
@@ -52,6 +62,15 @@ public class CloseModel : PageModel
         if (Lease == null)
         {
             return NotFound();
+        }
+
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+        var isTenant = User.IsInRole(UserRoles.Tenant);
+
+        if (!AuthorizationHelper.CanViewLease(Lease, userId, isAdmin, isTenant))
+        {
+            return Forbid();
         }
 
         if (Lease.Status != LeaseStatus.Active)
