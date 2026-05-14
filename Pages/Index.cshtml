@@ -8,22 +8,22 @@
 <partial name="_PageHeader" model='new PageHeaderModel { Title = "Dashboard" }' />
 
 <div class="stats-grid">
-    <div class="stat-card">
+    <a asp-page="/Properties/Index" class="stat-card" aria-label="View all properties">
         <span class="stat-label">Total Properties</span>
         <span class="stat-value">@Model.TotalProperties</span>
-    </div>
-    <div class="stat-card">
+    </a>
+    <a asp-page="/Leases/Index" class="stat-card" aria-label="View active leases">
         <span class="stat-label">Active Leases</span>
         <span class="stat-value">@Model.ActiveLeases</span>
-    </div>
-    <div class="stat-card">
+    </a>
+    <a asp-page="/Users/Index" class="stat-card" aria-label="View all users">
         <span class="stat-label">Total Tenants</span>
         <span class="stat-value">@Model.TotalTenants</span>
-    </div>
-    <div class="stat-card">
+    </a>
+    <a asp-page="/Payments/Index" asp-route-StatusFilter="Pending" class="stat-card" aria-label="View pending payments">
         <span class="stat-label">Pending Payments</span>
         <span class="stat-value">@Model.PendingPayments</span>
-    </div>
+    </a>
 </div>
 
 <div class="card">

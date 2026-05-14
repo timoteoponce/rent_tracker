@@ -4,16 +4,35 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - RentTracker</title>
+    <meta name="theme-color" content="#2563eb" id="theme-color-meta" />
+    <script>
+        (function() {
+            var theme = localStorage.getItem('theme');
+            if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                var meta = document.getElementById('theme-color-meta');
+                if (meta) meta.content = '#1e3a8a';
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="~/css/auth.css" asp-append-version="true" />
 </head>
 <body>
-    <div class="auth-wrapper">
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <button type="button" class="auth-theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+        <span class="theme-icon-light">&#9728;</span>
+        <span class="theme-icon-dark">&#9789;</span>
+    </button>
+
+    <div class="auth-wrapper" id="main-content">
         @RenderBody()
     </div>
 
     <script src="~/lib/jquery/jquery.min.js"></script>
     <script src="~/lib/jquery-validate/jquery.validate.min.js"></script>
     <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
