@@ -1,13 +1,11 @@
 @page
 @model RentTracker.Web.Pages.Payments.CreateModel
+@using RentTracker.Web.Models
 @{
     ViewData["Title"] = "Add Payment";
 }
 
-<div class="page-header">
-    <h2>Add Payment</h2>
-    <a asp-page="./Index" class="btn btn-secondary">Back to List</a>
-</div>
+<partial name="_PageHeader" model='new PageHeaderModel { Title = "Add Payment", ActionUrl = "./Index", ActionText = "Back to List" }' />
 
 <div class="page-content">
     @if (!string.IsNullOrEmpty(Model.WarningMessage))

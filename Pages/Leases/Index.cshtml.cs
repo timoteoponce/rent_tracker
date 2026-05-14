@@ -30,6 +30,7 @@ public class IndexModel : PageModel
         var isTenant = User.IsInRole(UserRoles.Tenant);
 
         var query = _context.Leases
+            .AsNoTracking()
             .Include(l => l.Property)
             .Include(l => l.PropertyUnit)
             .Include(l => l.Tenant)

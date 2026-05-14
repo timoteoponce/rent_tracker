@@ -107,16 +107,14 @@ public class ProfileModel : PageModel
             return Page();
         }
 
-        // Check for duplicate username (excluding current user) - client-side check due to SQLite limitations
-        var allUsers = await _context.Users.ToListAsync();
-        
-        if (allUsers.Any(u => u.Username.Equals(Input.Username, StringComparison.OrdinalIgnoreCase) && u.Id != user.Id))
+        // Check for duplicate username and email (database-side for performance)
+        if (await _context.Users.AnyAsync(u => u.Username.ToLower() == Input.Username.ToLower() && u.Id != user.Id))
         {
             ModelState.AddModelError("Input.Username", "This username is already taken.");
             return Page();
         }
 
-        if (allUsers.Any(u => u.Email.Equals(Input.Email, StringComparison.OrdinalIgnoreCase) && u.Id != user.Id))
+        if (await _context.Users.AnyAsync(u => u.Email.ToLower() == Input.Email.ToLower() && u.Id != user.Id))
         {
             ModelState.AddModelError("Input.Email", "This email is already in use.");
             return Page();

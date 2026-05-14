@@ -1,13 +1,11 @@
 @page
 @model RentTracker.Web.Pages.Reports.DetailedModel
+@using RentTracker.Web.Models
 @{
     ViewData["Title"] = "Detailed Reports";
 }
 
-<div class="page-header">
-    <h2>Detailed Breakdown</h2>
-    <a asp-page="./Index" class="btn btn-secondary">Back to Summary</a>
-</div>
+<partial name="_PageHeader" model='new PageHeaderModel { Title = "Detailed Breakdown", ActionUrl = "./Index", ActionText = "Back to Summary" }' />
 
 <div class="page-content">
     <div class="filters mb-4">
@@ -81,7 +79,7 @@
         }
         else
         {
-            <p class="text-muted">No payment data for the selected period.</p>
+            <partial name="_EmptyState" model='new EmptyStateModel { Message = "No payment data for the selected period." }' />
         }
     </div>
 
@@ -121,7 +119,7 @@
         }
         else
         {
-            <p class="text-muted">No payment data for the selected period.</p>
+            <partial name="_EmptyState" model='new EmptyStateModel { Message = "No payment data for the selected period." }' />
         }
     </div>
 </div>

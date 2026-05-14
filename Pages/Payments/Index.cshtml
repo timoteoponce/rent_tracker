@@ -1,5 +1,6 @@
 @page
 @model RentTracker.Web.Pages.Payments.IndexModel
+@using RentTracker.Web.Models
 @{
     ViewData["Title"] = "Payments";
 }
@@ -53,9 +54,7 @@
                             <td>Bs. @payment.Amount.ToString("N2") @payment.Currency</td>
                             <td>@payment.PaymentDate.ToString("dd MMM yyyy")</td>
                             <td>
-                                <span class="badge @(payment.Status == "Received" ? "badge-success" : payment.Status == "Pending" ? "badge-warning" : payment.Status == "Partial" ? "badge-info" : "badge-danger")">
-                                    @payment.Status
-                                </span>
+                                <partial name="_StatusBadge" model='new StatusBadgeModel { Status = payment.Status, Type = "Payment" }' />
                             </td>
                             <td>
                                 @if (User.IsInRole("Administrator") || User.IsInRole("Owner"))
@@ -71,6 +70,6 @@
     }
     else
     {
-        <p class="text-muted">No payments found.</p>
+        <partial name="_EmptyState" model='new EmptyStateModel { Message = "No payments found." }' />
     }
 </div>

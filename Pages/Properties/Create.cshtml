@@ -1,13 +1,11 @@
 @page
 @model RentTracker.Web.Pages.Properties.CreateModel
+@using RentTracker.Web.Models
 @{
     ViewData["Title"] = "Create Property";
 }
 
-<div class="page-header">
-    <h2>Create Property</h2>
-    <a asp-page="./Index" class="btn btn-secondary">Back to List</a>
-</div>
+<partial name="_PageHeader" model='new PageHeaderModel { Title = "Create Property", ActionUrl = "./Index", ActionText = "Back to List" }' />
 
 <div class="page-content">
     <form method="post" class="form-horizontal">
@@ -103,7 +101,14 @@
             </div>
         </div>
 
-        <div id="unitsSection" class="card" style="display: none;">
+        <div class="form-group">
+            <div class="form-check">
+                <input asp-for="Property.IsPrivate" type="checkbox" class="form-check-input" id="isPrivate" />
+                <label asp-for="Property.IsPrivate" class="form-check-label">Private property (only visible to me and administrators)</label>
+            </div>
+        </div>
+
+        <div id="unitsSection" class="card hidden">
             <div class="card-header">
                 <h4 class="card-title">Units</h4>
                 <button type="button" class="btn btn-sm btn-primary" id="addUnitBtn">Add Unit</button>
@@ -151,7 +156,7 @@
             var unitIndex = 1;
 
             function toggleUnitsSection() {
-                unitsSection.style.display = canBeLeasedByUnits.checked ? 'block' : 'none';
+                unitsSection.classList.toggle('hidden', !canBeLeasedByUnits.checked);
             }
 
             canBeLeasedByUnits.addEventListener('change', toggleUnitsSection);

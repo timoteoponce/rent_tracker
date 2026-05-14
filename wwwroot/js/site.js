@@ -7,7 +7,7 @@
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
         initConfirmDialogs();
-        initMobileMenu();
+        registerServiceWorker();
     });
 
     // Confirm dialogs for destructive actions
@@ -23,36 +23,45 @@
         });
     }
 
-    // Mobile menu toggle
-    function initMobileMenu() {
-        const menuToggle = document.getElementById('menu-toggle');
-        const headerNav = document.querySelector('.header-nav');
-        
-        if (menuToggle && headerNav) {
-            menuToggle.addEventListener('click', function() {
-                headerNav.classList.toggle('mobile-open');
-            });
+    // Service Worker registration with update banner support
+    function registerServiceWorker() {
+        if (!('serviceWorker' in navigator)) {
+            return;
         }
+
+        navigator.serviceWorker.register('/js/sw.js').then(function(reg) {
+            // Check for updates when the page loads
+            reg.addEventListener('updatefound', function() {
+                var newWorker = reg.installing;
+                newWorker.addEventListener('statechange', function() {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        // New version available — show refresh banner
+                        showUpdateBanner();
+                    }
+                });
+            });
+
+            // Also check periodically (every 60 minutes) for updates
+            setInterval(function() {
+                reg.update();
+            }, 60 * 60 * 1000);
+        });
+
+        // Listen for messages from the service worker
+        navigator.serviceWorker.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'UPDATE_CHECKED') {
+                // Optional: update UI based on check result
+            }
+        });
     }
 
-    // Format currency for display
-    window.formatCurrency = function(amount, currency) {
-        if (currency === 'BOB') {
-            return 'Bs. ' + parseFloat(amount).toFixed(2);
-        }
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: currency || 'USD'
-        }).format(amount);
-    };
-
-    // Format date for display
-    window.formatDate = function(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-    };
+    // Show a non-intrusive banner prompting the user to refresh
+    function showUpdateBanner() {
+        var banner = document.createElement('div');
+        banner.id = 'sw-update-banner';
+        banner.innerHTML =
+            '<span>An update is available. Refresh to get the latest version.</span>' +
+            '<button onclick="window.location.reload()">Refresh</button>';
+        document.body.appendChild(banner);
+    }
 })();

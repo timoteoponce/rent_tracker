@@ -53,10 +53,10 @@ public class LoginModel : PageModel
             return Page();
         }
 
-        // Find user by username or email
-        var allUsers = await _context.Users.ToListAsync();
-        var user = allUsers
-            .FirstOrDefault(u => (u.Username == Input.LoginIdentifier || u.Email == Input.LoginIdentifier) && u.IsActive);
+        // Find user by username or email (database-side filter for performance)
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.IsActive &&
+                (u.Username == Input.LoginIdentifier || u.Email == Input.LoginIdentifier));
 
         if (user == null)
         {

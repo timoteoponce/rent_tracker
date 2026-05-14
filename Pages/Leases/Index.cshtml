@@ -1,13 +1,11 @@
 @page
 @model RentTracker.Web.Pages.Leases.IndexModel
+@using RentTracker.Web.Models
 @{
     ViewData["Title"] = "Leases";
 }
 
-<div class="page-header">
-    <h2>Leases</h2>
-    <a asp-page="./Create" class="btn btn-primary">Create Lease</a>
-</div>
+<partial name="_PageHeader" model='new PageHeaderModel { Title = "Leases", ActionUrl = "./Create", ActionText = "Create Lease" }' />
 
 <div class="page-content">
     <div class="filters mb-3">
@@ -49,9 +47,7 @@
                             <td>@(lease.EndDate?.ToString("dd MMM yyyy") ?? "-")</td>
                             <td>Bs. @lease.AgreedPrice.ToString("N2")</td>
                             <td>
-                                <span class="badge @(lease.Status == "Active" ? "badge-success" : lease.Status == "Closed" ? "badge-info" : "badge-danger")">
-                                    @lease.Status
-                                </span>
+                                <partial name="_StatusBadge" model='new StatusBadgeModel { Status = lease.Status, Type = "Lease" }' />
                             </td>
                             <td>
                                 <a asp-page="./Details" asp-route-id="@lease.Id" class="btn btn-sm btn-secondary">View</a>
@@ -70,6 +66,6 @@
     }
     else
     {
-        <p class="text-muted">No leases found. <a asp-page="./Create">Create your first lease</a>.</p>
+        <partial name="_EmptyState" model='new EmptyStateModel { Message = "No leases found.", ActionUrl = "./Create", ActionText = "Create your first lease" }' />
     }
 </div>

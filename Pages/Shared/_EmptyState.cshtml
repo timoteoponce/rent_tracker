@@ -1,0 +1,9 @@
+@model RentTracker.Web.Models.EmptyStateModel
+
+<div class="empty-state">
+    <p class="text-muted">@Model.Message</p>
+    @if (!string.IsNullOrEmpty(Model.ActionUrl) && !string.IsNullOrEmpty(Model.ActionText))
+    {
+        <a href="@Model.ActionUrl" class="btn btn-primary">@Model.ActionText</a>
+    }
+</div>

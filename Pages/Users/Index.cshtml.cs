@@ -22,7 +22,9 @@ public class IndexModel : PageModel
     public async Task OnGetAsync()
     {
         // Fetch users and sort in memory (SQLite DateTimeOffset workaround)
-        var usersList = await _context.Users.ToListAsync();
+        var usersList = await _context.Users
+            .AsNoTracking()
+            .ToListAsync();
         Users = usersList
             .OrderBy(u => u.Role)
             .ThenBy(u => u.FullName)

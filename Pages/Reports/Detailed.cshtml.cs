@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
+using RentTracker.Web.Data.Queries;
+using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
 
 namespace RentTracker.Web.Pages.Reports;
@@ -12,10 +14,12 @@ namespace RentTracker.Web.Pages.Reports;
 public class DetailedModel : PageModel
 {
     private readonly RentTrackerDbContext _context;
+    private readonly ISqlQueryService _sqlQueries;
 
-    public DetailedModel(RentTrackerDbContext context)
+    public DetailedModel(RentTrackerDbContext context, ISqlQueryService sqlQueries)
     {
         _context = context;
+        _sqlQueries = sqlQueries;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -52,27 +56,24 @@ public class DetailedModel : PageModel
 
         // Load properties dropdown
         var properties = await _context.Properties
+            .AsNoTracking()
             .Where(p => p.IsEnabled)
             .OrderBy(p => p.Name)
             .ToListAsync();
         Properties = new SelectList(properties, "Id", "Name");
 
-        // Get all payments with related data first (SQLite DateTimeOffset workaround)
-        // Cannot use DateTimeOffset comparisons in WHERE clause with SQLite
-        var paymentsQuery = _context.Payments
-            .Include(p => p.Lease)
-            .ThenInclude(l => l.Property)
-            .AsEnumerable();  // Switch to client-side evaluation
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+        var isTenant = User.IsInRole(UserRoles.Tenant);
 
-        if (PropertyId.HasValue)
-        {
-            paymentsQuery = paymentsQuery.Where(p => p.Lease.PropertyId == PropertyId.Value);
-        }
-
-        // Filter by date range in memory (SQLite doesn't support DateTimeOffset comparisons in SQL)
-        var payments = paymentsQuery
-            .Where(p => p.ForPeriod >= StartDate && p.ForPeriod <= EndDate)
-            .ToList();
+        // Fetch payment details via SQL (avoids loading entire Payments table into memory)
+        var payments = await _sqlQueries.GetPaymentsInDateRangeAsync(
+            StartDate.Value,
+            EndDate.Value,
+            PropertyId,
+            userId,
+            isAdmin,
+            isTenant);
 
         // Calculate summary stats
         TotalPayments = payments.Count;
@@ -81,7 +82,7 @@ public class DetailedModel : PageModel
 
         // Property breakdown
         PropertyBreakdown = payments
-            .GroupBy(p => p.Lease.Property.Name)
+            .GroupBy(p => p.PropertyName)
             .Select(g => new PropertyBreakdownItem
             {
                 PropertyName = g.Key,
@@ -100,9 +101,9 @@ public class DetailedModel : PageModel
                 Month = new DateTimeOffset(new DateTime(g.Key.Year, g.Key.Month, 1)),
                 PaymentCount = g.Count(),
                 TotalRevenue = g.Sum(p => p.Amount),
-                PendingCount = g.Count(p => p.Status == PaymentStatus.Pending),
-                ReceivedCount = g.Count(p => p.Status == PaymentStatus.Received),
-                LateCount = g.Count(p => p.Status == PaymentStatus.Late)
+                PendingCount = g.Count(p => p.Status == "Pending"),
+                ReceivedCount = g.Count(p => p.Status == "Received"),
+                LateCount = g.Count(p => p.Status == "Late")
             })
             .OrderBy(x => x.Month)
             .ToList();
@@ -113,7 +114,7 @@ public class DetailedModel : PageModel
         public string PropertyName { get; set; } = string.Empty;
         public int PaymentCount { get; set; }
         public decimal TotalAmount { get; set; }
-        public decimal AverageAmount { get; set; }
+        public decimal AverageAmount { get; set; } = 0;
     }
 
     public class MonthlyBreakdownItem

@@ -106,7 +106,7 @@
             }
             else
             {
-                <p class="text-muted">No units defined yet. Add units above.</p>
+                <partial name="_EmptyState" model='new EmptyStateModel { Message = "No units defined yet. Add units above." }' />
             }
         </div>
     }

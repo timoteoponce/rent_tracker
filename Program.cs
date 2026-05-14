@@ -49,6 +49,10 @@ public class Program
 
         builder.Services.AddRazorPages();
 
+        // Register SQL-agnostic query service (SQLite implementation)
+        // Replace with PostgresQueryService if switching providers
+        builder.Services.AddScoped<Data.Queries.ISqlQueryService, Data.Queries.SqliteQueryService>();
+
         var app = builder.Build();
 
         // Apply migrations on startup

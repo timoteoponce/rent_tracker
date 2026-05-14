@@ -1,13 +1,11 @@
 @page
 @model RentTracker.Web.Pages.Properties.IndexModel
+@using RentTracker.Web.Models
 @{
     ViewData["Title"] = "Properties";
 }
 
-<div class="page-header">
-    <h2>Properties</h2>
-    <a asp-page="./Create" class="btn btn-primary">Add Property</a>
-</div>
+<partial name="_PageHeader" model='new PageHeaderModel { Title = "Properties", ActionUrl = "./Create", ActionText = "Add Property" }' />
 
 <div class="page-content">
     @if (Model.Properties.Any())
@@ -72,6 +70,6 @@
     }
     else
     {
-        <p class="text-muted">No properties found. <a asp-page="./Create">Add your first property</a>.</p>
+        <partial name="_EmptyState" model='new EmptyStateModel { Message = "No properties found.", ActionUrl = "./Create", ActionText = "Add your first property" }' />
     }
 </div>

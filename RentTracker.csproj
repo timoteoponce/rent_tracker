@@ -8,6 +8,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="RentTracker.Tests" />
+  </ItemGroup>
+
+  <!-- Exclude test project files from main compilation (test project is a subdirectory) -->
+  <ItemGroup>
+    <Compile Remove="RentTracker.Tests\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Entity Framework Core for SQLite -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">

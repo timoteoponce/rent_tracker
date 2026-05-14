@@ -48,16 +48,14 @@ public class CreateModel : PageModel
             User.Email = $"user-{random}@fakemail.ch";
         }
 
-        // Check for duplicate username (client-side fetch first due to DateTimeOffset limitations in SQLite)
-        var allUsers = await _context.Users.ToListAsync();
-        
-        if (allUsers.Any(u => u.Username.Equals(User.Username, StringComparison.OrdinalIgnoreCase)))
+        // Check for duplicate username and email (database-side for performance)
+        if (await _context.Users.AnyAsync(u => u.Username.ToLower() == User.Username.ToLower()))
         {
             ModelState.AddModelError("User.Username", "This username is already taken.");
             return Page();
         }
 
-        if (allUsers.Any(u => u.Email.Equals(User.Email, StringComparison.OrdinalIgnoreCase)))
+        if (await _context.Users.AnyAsync(u => u.Email.ToLower() == User.Email.ToLower()))
         {
             ModelState.AddModelError("User.Email", "This email is already in use.");
             return Page();

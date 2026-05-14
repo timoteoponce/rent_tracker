@@ -1,0 +1,44 @@
+@model RentTracker.Web.Models.StatusBadgeModel
+
+@{
+    var badgeClass = Model.Type switch
+    {
+        "Payment" => Model.Status switch
+        {
+            "Received" => "badge-success",
+            "Pending" => "badge-warning",
+            "Partial" => "badge-info",
+            "Late" => "badge-danger",
+            _ => "badge-info"
+        },
+        "Lease" => Model.Status switch
+        {
+            "Active" => "badge-success",
+            "Closed" => "badge-secondary",
+            "Terminated" => "badge-danger",
+            _ => "badge-info"
+        },
+        "Property" => Model.Status switch
+        {
+            "Enabled" => "badge-success",
+            "Disabled" => "badge-secondary",
+            _ => "badge-info"
+        },
+        "User" => Model.Status switch
+        {
+            "Active" => "badge-success",
+            "Inactive" => "badge-secondary",
+            _ => "badge-info"
+        },
+        "UserRole" => Model.Status switch
+        {
+            "Administrator" => "badge-danger",
+            "Owner" => "badge-info",
+            "Tenant" => "badge-success",
+            _ => "badge-info"
+        },
+        _ => "badge-info"
+    };
+}
+
+<span class="badge @badgeClass">@Model.Status</span>

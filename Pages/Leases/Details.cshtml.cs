@@ -24,6 +24,7 @@ public class DetailsModel : PageModel
     public async Task<IActionResult> OnGetAsync(Guid id)
     {
         Lease = await _context.Leases
+            .AsNoTracking()
             .Include(l => l.Property)
             .Include(l => l.PropertyUnit)
             .Include(l => l.Tenant)
@@ -46,6 +47,7 @@ public class DetailsModel : PageModel
         // Get payments for this lease (client-side ordering for DateTimeOffset)
         // Include Lease so CanViewPayment can check property visibility
         var paymentsQuery = await _context.Payments
+            .AsNoTracking()
             .Include(p => p.Lease)
             .ThenInclude(l => l.Property)
             .Where(p => p.LeaseId == id)

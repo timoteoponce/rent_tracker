@@ -1,13 +1,11 @@
 @page "{id:guid}"
 @model RentTracker.Web.Pages.Leases.DetailsModel
+@using RentTracker.Web.Models
 @{
     ViewData["Title"] = "Lease Details";
 }
 
-<div class="page-header">
-    <h2>Lease Details</h2>
-    <a asp-page="./Index" class="btn btn-secondary">Back to List</a>
-</div>
+<partial name="_PageHeader" model='new PageHeaderModel { Title = "Lease Details", ActionUrl = "./Index", ActionText = "Back to List" }' />
 
 <div class="page-content">
     <div class="card">
@@ -15,10 +13,7 @@
             <h3 class="card-title">@Model.Lease.Property.Name</h3>
         </div>
         <div class="form-row">
-            <div class="form-group">
-                <label>Property</label>
-                <p class="form-control-static">@Model.Lease.Property.Name</p>
-            </div>
+            <partial name="_ReadOnlyField" model='new ReadOnlyFieldModel { Label = "Property", Value = Model.Lease.Property.Name }' />
             <div class="form-group">
                 <label>Unit</label>
                 <p class="form-control-static">@(Model.Lease.PropertyUnit?.Name ?? "Whole Property")</p>
@@ -32,9 +27,7 @@
             <div class="form-group">
                 <label>Status</label>
                 <p class="form-control-static">
-                    <span class="badge @(Model.Lease.Status == "Active" ? "badge-success" : Model.Lease.Status == "Closed" ? "badge-info" : "badge-danger")">
-                        @Model.Lease.Status
-                    </span>
+                    <partial name="_StatusBadge" model='new StatusBadgeModel { Status = Model.Lease.Status, Type = "Lease" }' />
                 </p>
             </div>
         </div>
@@ -105,7 +98,7 @@
         }
         else
         {
-            <p class="text-muted">No payments recorded for this lease.</p>
+            <partial name="_EmptyState" model='new EmptyStateModel { Message = "No payments recorded for this lease." }' />
         }
     </div>
 

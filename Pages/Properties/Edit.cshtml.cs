@@ -59,10 +59,18 @@ public class EditModel : PageModel
         OriginalWarranty = Property.CurrentWarranty;
         OriginalCanBeLeasedByUnits = Property.CanBeLeasedByUnits;
 
+        // Batch lease existence check to avoid N+1 queries
+        var unitIds = Property.Units.Select(u => u.Id).ToList();
+        var leasedUnitIds = await _context.Leases
+            .Where(l => unitIds.Contains(l.PropertyUnitId.Value))
+            .Select(l => l.PropertyUnitId.Value)
+            .Distinct()
+            .ToListAsync();
+
         // Load existing units into the editable list
         foreach (var unit in Property.Units)
         {
-            var hasLeases = await _context.Leases.AnyAsync(l => l.PropertyUnitId == unit.Id);
+            var hasLeases = leasedUnitIds.Contains(unit.Id);
             if (hasLeases)
             {
                 LockedUnitIds.Add(unit.Id);
@@ -101,12 +109,7 @@ public class EditModel : PageModel
             ModelState.Remove(key);
         }
 
-        if (!ModelState.IsValid)
-        {
-            await ReloadLockedUnitIds();
-            return Page();
-        }
-
+        // Load the tracked entity directly for model binding
         var propertyToUpdate = await _context.Properties
             .Include(p => p.Units)
             .FirstOrDefaultAsync(p => p.Id == id);
@@ -114,6 +117,14 @@ public class EditModel : PageModel
         if (propertyToUpdate == null)
         {
             return NotFound();
+        }
+
+        // Bind form values directly to the tracked entity (prevents silent data loss when new properties are added)
+        if (!await TryUpdateModelAsync(propertyToUpdate, "Property"))
+        {
+            Property = propertyToUpdate;
+            await ReloadLockedUnitIds(propertyToUpdate.Units);
+            return Page();
         }
 
         var userId = AuthorizationHelper.GetCurrentUserId(User);
@@ -125,129 +136,135 @@ public class EditModel : PageModel
         }
 
         // If the IsPrivate flag changed, verify the user is allowed to toggle it
-        if (propertyToUpdate.IsPrivate != Property.IsPrivate)
+        if (!AuthorizationHelper.CanTogglePrivacy(propertyToUpdate, userId, isAdmin))
         {
-            if (!AuthorizationHelper.CanTogglePrivacy(propertyToUpdate, userId, isAdmin))
-            {
-                return Forbid();
-            }
+            return Forbid();
         }
 
         // Track price/warranty changes for history
-        var priceChanged = propertyToUpdate.CurrentPrice != Property.CurrentPrice;
-        var warrantyChanged = propertyToUpdate.CurrentWarranty != Property.CurrentWarranty;
-
-        if (priceChanged || warrantyChanged)
-        {
-            var priceHistory = new PropertyPriceHistory
-            {
-                PropertyId = propertyToUpdate.Id,
-                Price = Property.CurrentPrice,
-                Warranty = Property.CurrentWarranty,
-                ChangedAt = DateTimeOffset.UtcNow,
-                ChangeReason = $"Updated by {User.Identity?.Name}"
-            };
-            _context.PropertyPriceHistory.Add(priceHistory);
-        }
-
-        // Update all properties
-        propertyToUpdate.Name = Property.Name;
-        propertyToUpdate.Location = Property.Location;
-        propertyToUpdate.SurfaceSquareMeters = Property.SurfaceSquareMeters;
-        propertyToUpdate.NumberOfRooms = Property.NumberOfRooms;
-        propertyToUpdate.CurrentPrice = Property.CurrentPrice;
-        propertyToUpdate.CurrentWarranty = Property.CurrentWarranty;
-        propertyToUpdate.HasBathroom = Property.HasBathroom;
-        propertyToUpdate.HasKitchen = Property.HasKitchen;
-        propertyToUpdate.HasGarage = Property.HasGarage;
-        propertyToUpdate.HasHotWater = Property.HasHotWater;
-        propertyToUpdate.HasAirConditioning = Property.HasAirConditioning;
-        propertyToUpdate.HasBackyard = Property.HasBackyard;
-        propertyToUpdate.HasSecurity = Property.HasSecurity;
-        propertyToUpdate.HasDoorbell = Property.HasDoorbell;
-        propertyToUpdate.CanBeLeasedByUnits = Property.CanBeLeasedByUnits;
-        propertyToUpdate.IsPrivate = Property.IsPrivate;
-        propertyToUpdate.UpdatedAt = DateTimeOffset.UtcNow;
+        var priceChanged = OriginalPrice != propertyToUpdate.CurrentPrice;
+        var warrantyChanged = OriginalWarranty != propertyToUpdate.CurrentWarranty;
 
         // Update the last editor so they retain control over the privacy flag
         if (userId.HasValue)
         {
             propertyToUpdate.LastEditedById = userId.Value;
         }
+        propertyToUpdate.UpdatedAt = DateTimeOffset.UtcNow;
 
-        // Filter out null entries (can happen when unit rows are removed client-side,
-        // creating non-sequential indices that the model binder fills with nulls)
-        var validInputs = UnitInputs.Where(u => u != null).ToList();
+        // Wrap multi-operation update in a transaction for consistency
+        await using var transaction = await _context.Database.BeginTransactionAsync();
 
-        // Process units
-        var submittedIds = validInputs.Where(u => u.Id != Guid.Empty).Select(u => u.Id).ToHashSet();
-
-        // Delete units that were removed from the form (and have no lease history)
-        var unitsToDelete = propertyToUpdate.Units
-            .Where(u => !submittedIds.Contains(u.Id))
-            .ToList();
-
-        foreach (var unit in unitsToDelete)
+        try
         {
-            var hasLeases = await _context.Leases.AnyAsync(l => l.PropertyUnitId == unit.Id);
-            if (!hasLeases)
+            if (priceChanged || warrantyChanged)
             {
-                _context.PropertyUnits.Remove(unit);
-            }
-        }
-
-        // Add new units and update existing ones
-        foreach (var unitInput in validInputs)
-        {
-            if (string.IsNullOrWhiteSpace(unitInput.Name))
-                continue;
-
-            if (unitInput.Id == Guid.Empty)
-            {
-                // New unit
-                var unit = new PropertyUnit
+                var priceHistory = new PropertyPriceHistory
                 {
                     PropertyId = propertyToUpdate.Id,
-                    Name = unitInput.Name,
-                    Description = unitInput.Description,
-                    Price = unitInput.Price > 0 ? unitInput.Price.Value : propertyToUpdate.CurrentPrice,
-                    Warranty = unitInput.Warranty > 0 ? unitInput.Warranty.Value : propertyToUpdate.CurrentWarranty,
-                    IsAvailable = true,
-                    CreatedAt = DateTimeOffset.UtcNow
+                    Price = propertyToUpdate.CurrentPrice,
+                    Warranty = propertyToUpdate.CurrentWarranty,
+                    ChangedAt = DateTimeOffset.UtcNow,
+                    ChangeReason = $"Updated by {User.Identity?.Name}"
                 };
-                _context.PropertyUnits.Add(unit);
+                _context.PropertyPriceHistory.Add(priceHistory);
             }
-            else
+
+            // Filter out null entries (can happen when unit rows are removed client-side)
+            var validInputs = UnitInputs.Where(u => u != null).ToList();
+
+            // Process units
+            var submittedIds = validInputs.Where(u => u.Id != Guid.Empty).Select(u => u.Id).ToHashSet();
+
+            // Batch lease existence check to avoid N+1 queries
+            var unitIds = propertyToUpdate.Units.Select(u => u.Id).ToList();
+            var leasedUnitIds = await _context.Leases
+                .Where(l => unitIds.Contains(l.PropertyUnitId.Value))
+                .Select(l => l.PropertyUnitId.Value)
+                .Distinct()
+                .ToListAsync();
+
+            // Delete units that were removed from the form (and have no lease history)
+            var unitsToDelete = propertyToUpdate.Units
+                .Where(u => !submittedIds.Contains(u.Id))
+                .ToList();
+
+            foreach (var unit in unitsToDelete)
             {
-                // Update existing unit (only if not locked by lease)
-                var existingUnit = propertyToUpdate.Units.FirstOrDefault(u => u.Id == unitInput.Id);
-                if (existingUnit != null && !unitInput.IsLocked)
+                if (!leasedUnitIds.Contains(unit.Id))
                 {
-                    existingUnit.Name = unitInput.Name;
-                    existingUnit.Description = unitInput.Description;
-                    existingUnit.Price = unitInput.Price ?? existingUnit.Price;
-                    existingUnit.Warranty = unitInput.Warranty ?? existingUnit.Warranty;
+                    _context.PropertyUnits.Remove(unit);
                 }
             }
-        }
 
-        await _context.SaveChangesAsync();
+            // Add new units and update existing ones
+            foreach (var unitInput in validInputs)
+            {
+                if (string.IsNullOrWhiteSpace(unitInput.Name))
+                    continue;
+
+                if (unitInput.Id == Guid.Empty)
+                {
+                    // New unit
+                    var unit = new PropertyUnit
+                    {
+                        PropertyId = propertyToUpdate.Id,
+                        Name = unitInput.Name,
+                        Description = unitInput.Description,
+                        Price = unitInput.Price > 0 ? unitInput.Price.Value : propertyToUpdate.CurrentPrice,
+                        Warranty = unitInput.Warranty > 0 ? unitInput.Warranty.Value : propertyToUpdate.CurrentWarranty,
+                        IsAvailable = true,
+                        CreatedAt = DateTimeOffset.UtcNow
+                    };
+                    _context.PropertyUnits.Add(unit);
+                }
+                else
+                {
+                    // Update existing unit (only if not locked by lease)
+                    var existingUnit = propertyToUpdate.Units.FirstOrDefault(u => u.Id == unitInput.Id);
+                    if (existingUnit != null && !leasedUnitIds.Contains(unitInput.Id))
+                    {
+                        existingUnit.Name = unitInput.Name;
+                        existingUnit.Description = unitInput.Description;
+                        existingUnit.Price = unitInput.Price ?? existingUnit.Price;
+                        existingUnit.Warranty = unitInput.Warranty ?? existingUnit.Warranty;
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
 
         return RedirectToPage("./Details", new { id = propertyToUpdate.Id });
     }
 
-    private async Task ReloadLockedUnitIds()
+    private async Task ReloadLockedUnitIds(ICollection<PropertyUnit> units)
     {
-        foreach (var unit in UnitInputs.Where(u => u != null))
+        // Batch lease existence check to avoid N+1 queries
+        var unitIds = units.Select(u => u.Id).ToList();
+        var leasedUnitIds = await _context.Leases
+            .Where(l => unitIds.Contains(l.PropertyUnitId.Value))
+            .Select(l => l.PropertyUnitId.Value)
+            .Distinct()
+            .ToListAsync();
+
+        foreach (var unit in units)
         {
-            if (unit!.Id != Guid.Empty)
+            var isLocked = leasedUnitIds.Contains(unit.Id);
+            var input = UnitInputs.FirstOrDefault(u => u?.Id == unit.Id);
+            if (input != null)
             {
-                var hasLeases = await _context.Leases.AnyAsync(l => l.PropertyUnitId == unit.Id);
-                unit.IsLocked = hasLeases;
-                if (hasLeases)
-                {
-                    LockedUnitIds.Add(unit.Id);
-                }
+                input.IsLocked = isLocked;
+            }
+            if (isLocked)
+            {
+                LockedUnitIds.Add(unit.Id);
             }
         }
     }

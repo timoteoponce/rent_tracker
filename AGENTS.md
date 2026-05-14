@@ -442,6 +442,82 @@ var payments = _context.Payments
 - Razor Pages: https://learn.microsoft.com/en-us/aspnet/core/razor-pages/
 - VS Code C# Dev Kit: https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csdevkit
 
+## Test Project
+
+The project includes a `RentTracker.Tests/` subdirectory with integration and unit tests.
+
+```bash
+dotnet test RentTracker.Tests/RentTracker.Tests.csproj
+```
+
+**Key test categories:**
+- **Integration tests** (`Integration/`) — Full HTTP roundtrips via `WebApplicationFactory` with in-memory SQLite
+- **Unit tests** (`Unit/`) — Isolated logic: `AuthorizationHelper`, `PropertyQueryExtensions`, password hashing
+- **Characterization tests** (`Characterization/`) — Document known bugs before fixing them; flip assertions after fix
+
+The test project is excluded from the main compilation via `<Compile Remove="RentTracker.Tests\**\*.cs" />` in `RentTracker.csproj`.
+
+## SQL-Agnostic Query Layer
+
+For performance-critical aggregations that SQLite cannot translate efficiently (DateTimeOffset ordering, grouping, date-range filtering), the app uses `ISqlQueryService` in `Data/Queries/`.
+
+**Current implementation:** `SqliteQueryService` (uses `Database.SqlQueryRaw<T>` with SQLite `strftime` functions)
+**To switch providers:** Implement a new class (e.g., `PostgresQueryService`) and change the registration in `Program.cs`:
+```csharp
+builder.Services.AddScoped<Data.Queries.ISqlQueryService, Data.Queries.PostgresQueryService>();
+```
+
+**PageModels that use the service:**
+- `Pages/Reports/Index.cshtml.cs` — Monthly revenue, status counts, occupancy stats
+- `Pages/Reports/Detailed.cshtml.cs` — Date-range filtered payment reports
+- `Pages/Index.cshtml.cs` — Recent payments (top 10 by `CreatedAt`)
+
+## UI Normalization Patterns
+
+Shared partials live in `Pages/Shared/` and should be used for repeated markup:
+
+- `_PageHeader.cshtml` — Title + optional action button (`PageHeaderModel`)
+- `_StatusBadge.cshtml` — Status-to-CSS mapping (`StatusBadgeModel`)
+- `_EmptyState.cshtml` — "No items found" messages (`EmptyStateModel`)
+- `_ReadOnlyField.cshtml` — Label + static value pairs (`ReadOnlyFieldModel`)
+
+When adding a new page, check if any of these patterns apply and use the partial instead of copy-pasting.
+
+## Critical: Preventing Silent Data Loss
+
+The most common maintenance mistake is adding a new model property and forgetting to update every form that edits that entity. This causes **silent data loss**: the user fills in the field, submits the form, and the value is silently discarded with no error.
+
+### Prevention Checklist (MUST follow)
+
+When adding a new property to **any** entity that has an Edit page:
+
+1. ✅ Add the property to the **Edit form** (`.cshtml`)
+2. ✅ Add the property to the **Edit PageModel binding whitelist** (or it won't be updated)
+3. ✅ Add the property to the **Create form** (if it should be set on creation)
+4. ✅ Run `dotnet ef migrations add <Name>` if the property is persisted
+5. ✅ Run `dotnet test` to verify roundtrip tests still pass
+
+### How Edit Pages Prevent Silent Loss
+
+All Edit PageModels now use `TryUpdateModelAsync` on the **tracked entity loaded from the database**:
+
+```csharp
+// Load tracked entity
+var propertyToUpdate = await _context.Properties.FindAsync(id);
+
+// Bind form values directly (no manual field-by-field copying)
+if (!await TryUpdateModelAsync(propertyToUpdate, "Property"))
+{
+    return Page();
+}
+
+await _context.SaveChangesAsync();
+```
+
+This means: **if the form includes a new field, it is automatically persisted**. If you forget the form field, the property simply won't be updated (visible to the user during testing), rather than being silently overwritten with old data.
+
+---
+
 ## For AI Agents: How to Build and Extend This Application
 
 > This section provides explicit instructions for AI assistants (Kimi, Copilot, Claude, etc.) working on this codebase. It includes templates, patterns, and step-by-step guides.

@@ -25,6 +25,7 @@ public class IndexModel : PageModel
         var isAdmin = User.IsInRole(UserRoles.Administrator);
 
         var query = _context.Properties
+            .AsNoTracking()
             .VisibleToUser(userId, isAdmin)
             .AsQueryable();
 

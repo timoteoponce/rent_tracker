@@ -24,6 +24,7 @@ public class DetailsModel : PageModel
     public async Task<IActionResult> OnGetAsync(Guid id)
     {
         Property = await _context.Properties
+            .AsNoTracking()
             .Include(p => p.Units)
             .FirstOrDefaultAsync(p => p.Id == id);
 
@@ -42,6 +43,7 @@ public class DetailsModel : PageModel
 
         // Get lease history - client side sort for DateTimeOffset
         var leasesList = await _context.Leases
+            .AsNoTracking()
             .Include(l => l.Tenant)
             .Include(l => l.PropertyUnit)
             .Where(l => l.PropertyId == id)

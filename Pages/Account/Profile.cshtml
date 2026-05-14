@@ -1,13 +1,11 @@
 @page
 @model RentTracker.Web.Pages.Account.ProfileModel
+@using RentTracker.Web.Models
 @{
     ViewData["Title"] = "My Profile";
 }
 
-<div class="page-header">
-    <h2>My Profile</h2>
-    <a asp-page="./ChangePassword" class="btn btn-secondary">Change Password</a>
-</div>
+<partial name="_PageHeader" model='new PageHeaderModel { Title = "My Profile", ActionUrl = "./ChangePassword", ActionText = "Change Password" }' />
 
 <div class="page-content">
     @if (!string.IsNullOrEmpty(Model.SuccessMessage))
@@ -53,9 +51,7 @@
         <div class="form-group">
             <label>Role</label>
             <div class="form-control-static">
-                <span class="badge @(Model.CurrentUser.Role == "Administrator" ? "badge-danger" : Model.CurrentUser.Role == "Owner" ? "badge-info" : "badge-success")">
-                    @Model.CurrentUser.Role
-                </span>
+                <partial name="_StatusBadge" model='new StatusBadgeModel { Status = Model.CurrentUser.Role, Type = "UserRole" }' />
             </div>
             <small class="text-muted">Role can only be changed by an administrator</small>
         </div>

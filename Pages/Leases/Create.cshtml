@@ -1,13 +1,11 @@
 @page
 @model RentTracker.Web.Pages.Leases.CreateModel
+@using RentTracker.Web.Models
 @{
     ViewData["Title"] = "Create Lease";
 }
 
-<div class="page-header">
-    <h2>Create Lease</h2>
-    <a asp-page="./Index" class="btn btn-secondary">Back to List</a>
-</div>
+<partial name="_PageHeader" model='new PageHeaderModel { Title = "Create Lease", ActionUrl = "./Index", ActionText = "Back to List" }' />
 
 <div class="page-content">
     <form method="post" class="form-horizontal">

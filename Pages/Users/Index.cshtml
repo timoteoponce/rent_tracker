@@ -1,13 +1,11 @@
 @page
 @model RentTracker.Web.Pages.Users.IndexModel
+@using RentTracker.Web.Models
 @{
     ViewData["Title"] = "User Management";
 }
 
-<div class="page-header">
-    <h2>User Management</h2>
-    <a asp-page="./Create" class="btn btn-primary">Add User</a>
-</div>
+<partial name="_PageHeader" model='new PageHeaderModel { Title = "User Management", ActionUrl = "./Create", ActionText = "Add User" }' />
 
 <div class="page-content">
     @if (Model.Users.Any())
@@ -34,9 +32,7 @@
                             <td>@user.FullName</td>
                             <td>@user.Email</td>
                             <td>
-                                <span class="badge @(user.Role == "Administrator" ? "badge-danger" : user.Role == "Owner" ? "badge-info" : "badge-success")">
-                                    @user.Role
-                                </span>
+                                <partial name="_StatusBadge" model='new StatusBadgeModel { Status = user.Role, Type = "UserRole" }' />
                             </td>
                             <td>
                                 @if (user.IsActive)
@@ -80,6 +76,6 @@
     }
     else
     {
-        <p class="text-muted">No users found.</p>
+        <partial name="_EmptyState" model='new EmptyStateModel { Message = "No users found." }' />
     }
 </div>
