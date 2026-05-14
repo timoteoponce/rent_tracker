@@ -1,5 +1,6 @@
 @page "{id:guid}"
 @model RentTracker.Web.Pages.Properties.DetailsModel
+@using RentTracker.Web.Models
 @{
     ViewData["Title"] = "Property Details";
 }
@@ -180,7 +181,7 @@
                         @foreach (var lease in Model.LeaseHistory)
                         {
                             <tr>
-                                <td>@lease.Tenant.FullName</td>
+                                <td>@(lease.Tenant?.FullName ?? "Unknown Tenant")</td>
                                 @if (Model.Property.CanBeLeasedByUnits)
                                 {
                                     <td>@(lease.PropertyUnit?.Name ?? "Whole Property")</td>
@@ -188,9 +189,7 @@
                                 <td>@lease.StartDate.ToString("dd MMM yyyy")</td>
                                 <td>@(lease.EndDate?.ToString("dd MMM yyyy") ?? "-")</td>
                                 <td>
-                                    <span class="badge @(lease.Status == "Active" ? "badge-success" : lease.Status == "Closed" ? "badge-info" : "badge-danger")">
-                                        @lease.Status
-                                    </span>
+                                    <partial name="_StatusBadge" model='new StatusBadgeModel { Status = lease.Status, Type = "Lease" }' />
                                 </td>
                                 <td>Bs. @lease.AgreedPrice.ToString("N2")</td>
                             </tr>
@@ -201,7 +200,7 @@
         }
         else
         {
-            <p class="text-muted">No lease history for this property.</p>
+            <partial name="_EmptyState" model='new EmptyStateModel { Message = "No lease history for this property." }' />
         }
     </div>
 

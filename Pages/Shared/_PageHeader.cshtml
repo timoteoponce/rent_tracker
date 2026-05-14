@@ -1,0 +1,16 @@
+@model RentTracker.Web.Models.PageHeaderModel
+
+<div class="page-header">
+    <h2>@Model.Title</h2>
+    @if (!string.IsNullOrEmpty(Model.ActionUrl) && !string.IsNullOrEmpty(Model.ActionText))
+    {
+        @if (!string.IsNullOrEmpty(Model.ActionRouteId))
+        {
+            <a asp-page="@Model.ActionUrl" asp-route-id="@Model.ActionRouteId" class="btn btn-primary">@Model.ActionText</a>
+        }
+        else
+        {
+            <a asp-page="@Model.ActionUrl" class="btn btn-primary">@Model.ActionText</a>
+        }
+    }
+</div>

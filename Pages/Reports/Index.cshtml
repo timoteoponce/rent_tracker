@@ -1,13 +1,11 @@
 @page
 @model RentTracker.Web.Pages.Reports.IndexModel
+@using RentTracker.Web.Models
 @{
     ViewData["Title"] = "Reports";
 }
 
-<div class="page-header">
-    <h2>Reports Dashboard</h2>
-    <a asp-page="./Detailed" class="btn btn-secondary">Detailed Breakdown</a>
-</div>
+<partial name="_PageHeader" model='new PageHeaderModel { Title = "Reports Dashboard", ActionUrl = "./Detailed", ActionText = "Detailed Breakdown" }' />
 
 <div class="page-content">
     <div class="stats-grid">
@@ -34,7 +32,7 @@
             <div class="card-header">
                 <h3 class="card-title">Monthly Revenue (@Model.CurrentYear)</h3>
             </div>
-            <div style="position: relative; height: 300px;">
+            <div class="chart-container">
                 <canvas id="revenueChart"></canvas>
             </div>
         </div>
@@ -43,7 +41,7 @@
             <div class="card-header">
                 <h3 class="card-title">Payment Status Distribution</h3>
             </div>
-            <div style="position: relative; height: 300px;">
+            <div class="chart-container">
                 <canvas id="paymentStatusChart"></canvas>
             </div>
         </div>
@@ -53,7 +51,7 @@
         <div class="card-header">
             <h3 class="card-title">Property Status Overview</h3>
         </div>
-        <div style="position: relative; height: 250px;">
+        <div class="chart-container" style="height: 250px;">
             <canvas id="propertyStatusChart"></canvas>
         </div>
     </div>

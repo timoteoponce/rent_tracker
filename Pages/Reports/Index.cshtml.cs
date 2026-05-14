@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
+using RentTracker.Web.Data.Queries;
 using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
 
@@ -11,10 +11,12 @@ namespace RentTracker.Web.Pages.Reports;
 public class IndexModel : PageModel
 {
     private readonly RentTrackerDbContext _context;
+    private readonly ISqlQueryService _sqlQueries;
 
-    public IndexModel(RentTrackerDbContext context)
+    public IndexModel(RentTrackerDbContext context, ISqlQueryService sqlQueries)
     {
         _context = context;
+        _sqlQueries = sqlQueries;
     }
 
     // Property Stats
@@ -26,7 +28,7 @@ public class IndexModel : PageModel
     // Revenue Stats
     public decimal ThisMonthRevenue { get; set; }
     public int CurrentYear { get; set; }
-    public List<string> MonthLabels { get; set; } = new();
+    public List<string> MonthLabels { get; set; } = new() { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
     public List<decimal> MonthlyRevenue { get; set; } = new();
 
     // Payment Status
@@ -41,67 +43,40 @@ public class IndexModel : PageModel
 
         CurrentYear = DateTimeOffset.UtcNow.Year;
 
-        // Property statistics - filtered by visibility
-        var properties = await _context.Properties
-            .VisibleToUser(userId, isAdmin)
-            .ToListAsync();
-        TotalProperties = properties.Count;
-        DisabledProperties = properties.Count(p => !p.IsEnabled);
+        // Property occupancy statistics via SQL (avoids loading full entity graphs)
+        var occupancy = await _sqlQueries.GetPropertyOccupancyStatsAsync(userId, isAdmin);
+        TotalProperties = occupancy.TotalProperties;
+        OccupiedProperties = occupancy.OccupiedProperties;
+        AvailableProperties = occupancy.AvailableProperties;
+        DisabledProperties = occupancy.DisabledProperties;
 
-        // Count occupied (has active lease) - filtered by visibility
-        var activeLeases = await _context.Leases
-            .Include(l => l.Property)
-            .Where(l => l.Status == LeaseStatus.Active)
-            .VisibleToUser(userId, isAdmin, isTenant)
-            .ToListAsync();
-
-        // Count unique properties with active leases
-        var occupiedPropertyIds = activeLeases.Select(l => l.PropertyId).Distinct().ToList();
-        OccupiedProperties = occupiedPropertyIds.Count;
-        AvailableProperties = TotalProperties - OccupiedProperties - DisabledProperties;
-
-        // Monthly revenue for current year - filtered by visibility
-        MonthLabels = new List<string> { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-        
-        // NOTE: Fetch all payments and filter client-side because SQLite doesn't support DateTimeOffset.Year in LINQ
-        var allPaymentsList = await _context.Payments
-            .Include(p => p.Lease)
-            .ThenInclude(l => l.Property)
-            .Where(p => p.Status == PaymentStatus.Received)
-            .VisibleToUser(userId, isAdmin, isTenant)
-            .ToListAsync();
-        
-        var payments = allPaymentsList
-            .Where(p => p.ForPeriod.Year == CurrentYear)
-            .ToList();
-
-        MonthlyRevenue = new List<decimal>();
-        for (int month = 1; month <= 12; month++)
+        // Monthly revenue via SQL (avoids client-side DateTimeOffset filtering)
+        var monthlyRevenueData = await _sqlQueries.GetMonthlyRevenueAsync(CurrentYear, userId, isAdmin, isTenant);
+        MonthlyRevenue = new List<decimal>(new decimal[12]);
+        foreach (var item in monthlyRevenueData)
         {
-            var monthRevenue = payments
-                .Where(p => p.ForPeriod.Month == month)
-                .Sum(p => p.Amount);
-            MonthlyRevenue.Add(monthRevenue);
+            if (item.Month >= 1 && item.Month <= 12)
+            {
+                MonthlyRevenue[item.Month - 1] = item.TotalRevenue;
+            }
         }
 
         // This month revenue
         var thisMonth = DateTimeOffset.UtcNow.Month;
-        ThisMonthRevenue = payments
-            .Where(p => p.ForPeriod.Month == thisMonth)
-            .Sum(p => p.Amount);
+        ThisMonthRevenue = monthlyRevenueData
+            .Where(r => r.Month == thisMonth)
+            .Select(r => r.TotalRevenue)
+            .FirstOrDefault();
 
-        // Payment status counts - filtered by visibility
-        var allPayments = await _context.Payments
-            .Include(p => p.Lease)
-            .ThenInclude(l => l.Property)
-            .VisibleToUser(userId, isAdmin, isTenant)
-            .ToListAsync();
+        // Payment status counts via SQL
+        var statusCounts = await _sqlQueries.GetPaymentStatusCountsAsync(userId, isAdmin, isTenant);
+        var countsByStatus = statusCounts.ToDictionary(s => s.Status, s => s.Count);
         PaymentStatusCounts = new List<int>
         {
-            allPayments.Count(p => p.Status == PaymentStatus.Pending),
-            allPayments.Count(p => p.Status == PaymentStatus.Received),
-            allPayments.Count(p => p.Status == PaymentStatus.Partial),
-            allPayments.Count(p => p.Status == PaymentStatus.Late)
+            countsByStatus.GetValueOrDefault(PaymentStatus.Pending),
+            countsByStatus.GetValueOrDefault(PaymentStatus.Received),
+            countsByStatus.GetValueOrDefault(PaymentStatus.Partial),
+            countsByStatus.GetValueOrDefault(PaymentStatus.Late)
         };
     }
 }

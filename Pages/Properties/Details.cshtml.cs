@@ -24,6 +24,7 @@ public class DetailsModel : PageModel
     public async Task<IActionResult> OnGetAsync(Guid id)
     {
         Property = await _context.Properties
+            .AsNoTracking()
             .Include(p => p.Units)
             .FirstOrDefaultAsync(p => p.Id == id);
 
@@ -40,8 +41,10 @@ public class DetailsModel : PageModel
             return Forbid();
         }
 
-        // Get lease history - client side sort for DateTimeOffset
+        // Get lease history - include Property so CanViewLease can check visibility without N+1
         var leasesList = await _context.Leases
+            .AsNoTracking()
+            .Include(l => l.Property)
             .Include(l => l.Tenant)
             .Include(l => l.PropertyUnit)
             .Where(l => l.PropertyId == id)

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
+using RentTracker.Web.Data.Queries;
+using RentTracker.Web.Data.Queries.Dtos;
 using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
 
@@ -11,10 +13,12 @@ namespace RentTracker.Web.Pages;
 public class IndexModel : PageModel
 {
     private readonly RentTrackerDbContext _context;
+    private readonly ISqlQueryService _sqlQueries;
 
-    public IndexModel(RentTrackerDbContext context)
+    public IndexModel(RentTrackerDbContext context, ISqlQueryService sqlQueries)
     {
         _context = context;
+        _sqlQueries = sqlQueries;
     }
 
     public int TotalProperties { get; set; }
@@ -22,7 +26,7 @@ public class IndexModel : PageModel
     public int TotalTenants { get; set; }
     public int PendingPayments { get; set; }
     
-    public List<Payment> RecentPayments { get; set; } = new();
+    public List<RecentPaymentDto> RecentPayments { get; set; } = new();
     public List<Lease> ActiveLeasesList { get; set; } = new();
 
     public async Task OnGetAsync()
@@ -32,49 +36,35 @@ public class IndexModel : PageModel
         var isTenant = User.IsInRole(UserRoles.Tenant);
 
         // Get counts - filtered by visibility
-        var visibleProperties = await _context.Properties
+        TotalProperties = await _context.Properties
+            .AsNoTracking()
             .VisibleToUser(userId, isAdmin)
             .Where(p => p.IsEnabled)
-            .ToListAsync();
-        TotalProperties = visibleProperties.Count;
+            .CountAsync();
         
-        var visibleActiveLeases = await _context.Leases
-            .Include(l => l.Property)
+        ActiveLeases = await _context.Leases
+            .AsNoTracking()
             .Where(l => l.Status == LeaseStatus.Active)
             .VisibleToUser(userId, isAdmin, isTenant)
-            .ToListAsync();
-        ActiveLeases = visibleActiveLeases.Count;
+            .CountAsync();
         
         TotalTenants = await _context.Users
+            .AsNoTracking()
             .CountAsync(u => u.Role == UserRoles.Tenant && u.IsActive);
         
-        var visiblePendingPayments = await _context.Payments
-            .Include(p => p.Lease)
-            .ThenInclude(l => l.Property)
+        PendingPayments = await _context.Payments
+            .AsNoTracking()
             .Where(p => p.Status == PaymentStatus.Pending)
             .VisibleToUser(userId, isAdmin, isTenant)
-            .ToListAsync();
-        PendingPayments = visiblePendingPayments.Count;
+            .CountAsync();
 
-        // Get recent payments with related data
-        // NOTE: Using client-side ordering because SQLite doesn't support DateTimeOffset in ORDER BY
-        var recentPaymentsQuery = await _context.Payments
-            .Include(p => p.Lease)
-            .ThenInclude(l => l.Property)
-            .Include(p => p.Lease)
-            .ThenInclude(l => l.Tenant)
-            .VisibleToUser(userId, isAdmin, isTenant)
-            .Take(50)  // Take more than needed, then sort in memory
-            .ToListAsync();
-        
-        RecentPayments = recentPaymentsQuery
-            .OrderByDescending(p => p.CreatedAt)
-            .Take(10)
-            .ToList();
+        // Get recent payments via SQL (avoids client-side sorting and over-fetching)
+        RecentPayments = await _sqlQueries.GetRecentPaymentsAsync(10, userId, isAdmin, isTenant);
 
         // Get active leases with related data
-        // NOTE: Using client-side ordering because SQLite doesn't support DateTimeOffset in ORDER BY
+        // NOTE: Fetch then sort client-side (SQLite DateTimeOffset workaround)
         var activeLeasesQuery = await _context.Leases
+            .AsNoTracking()
             .Include(l => l.Property)
             .Include(l => l.Tenant)
             .Where(l => l.Status == LeaseStatus.Active)

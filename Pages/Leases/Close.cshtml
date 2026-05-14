@@ -11,9 +11,9 @@
 
 <div class="page-content">
     <div class="alert alert-info">
-        <h4>Close Lease for @Model.Lease.Property.Name</h4>
+        <h4>Close Lease for @(Model.Lease.Property?.Name ?? "Unknown Property")</h4>
         <p>
-            Tenant: <strong>@Model.Lease.Tenant.FullName</strong><br>
+            Tenant: <strong>@(Model.Lease.Tenant?.FullName ?? "Unknown Tenant")</strong><br>
             Current Monthly Rent: <strong>Bs. @Model.Lease.AgreedPrice.ToString("N2")</strong><br>
             Start Date: <strong>@Model.Lease.StartDate.ToString("dd MMM yyyy")</strong>
         </p>

@@ -140,12 +140,21 @@ public class EditModel : PageModel
             }
         }
 
-        // Update lease fields
-        existingLease.AgreedPrice = Lease.AgreedPrice;
-        existingLease.AgreedWarranty = Lease.AgreedWarranty;
-        existingLease.StartDate = Lease.StartDate;
-        existingLease.EndDate = Lease.EndDate;
-        existingLease.PropertyUnitId = Lease.PropertyUnitId;
+        // Bind form values directly to the tracked entity (prevents silent data loss when new properties are added)
+        if (!await TryUpdateModelAsync(
+            existingLease,
+            "Lease",
+            l => l.AgreedPrice,
+            l => l.AgreedWarranty,
+            l => l.StartDate,
+            l => l.EndDate,
+            l => l.PropertyUnitId))
+        {
+            Lease = existingLease;
+            await LoadUnitListAsync();
+            return Page();
+        }
+
         existingLease.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _context.SaveChangesAsync();

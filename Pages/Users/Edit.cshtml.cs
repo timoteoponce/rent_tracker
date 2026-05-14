@@ -35,6 +35,9 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnPostAsync(Guid id)
     {
+        // Remove PasswordHash validation error - it is not submitted from the form
+        ModelState.Remove("User.PasswordHash");
+
         if (!ModelState.IsValid)
         {
             return Page();
@@ -61,26 +64,31 @@ public class EditModel : PageModel
             return Page();
         }
 
-        // Check for duplicate username (excluding current user) - client-side check due to SQLite DateTimeOffset limitations
-        var allUsers = await _context.Users.ToListAsync();
-        
-        if (allUsers.Any(u => u.Username.Equals(User.Username, StringComparison.OrdinalIgnoreCase) && u.Id != id))
+        // Check for duplicate username and email (database-side for performance)
+        if (await _context.Users.AnyAsync(u => u.Username.ToLower() == User.Username.ToLower() && u.Id != id))
         {
             ModelState.AddModelError("User.Username", "This username is already taken.");
             return Page();
         }
 
-        if (allUsers.Any(u => u.Email.Equals(User.Email, StringComparison.OrdinalIgnoreCase) && u.Id != id))
+        if (await _context.Users.AnyAsync(u => u.Email.ToLower() == User.Email.ToLower() && u.Id != id))
         {
             ModelState.AddModelError("User.Email", "This email is already in use.");
             return Page();
         }
 
-        // Update user properties
-        userToUpdate.Username = User.Username;
-        userToUpdate.Email = User.Email;
-        userToUpdate.FullName = User.FullName;
-        userToUpdate.Role = User.Role;
+        // Bind form values directly to the tracked entity (prevents silent data loss when new properties are added)
+        if (!await TryUpdateModelAsync(
+            userToUpdate,
+            "User",
+            u => u.Username,
+            u => u.Email,
+            u => u.FullName,
+            u => u.Role))
+        {
+            User = userToUpdate;
+            return Page();
+        }
 
         try
         {

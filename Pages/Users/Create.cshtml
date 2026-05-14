@@ -1,13 +1,11 @@
 @page
 @model RentTracker.Web.Pages.Users.CreateModel
+@using RentTracker.Web.Models
 @{
     ViewData["Title"] = "Add User";
 }
 
-<div class="page-header">
-    <h2>Add User</h2>
-    <a asp-page="./Index" class="btn btn-secondary">Back to List</a>
-</div>
+<partial name="_PageHeader" model='new PageHeaderModel { Title = "Add User", ActionUrl = "./Index", ActionText = "Back to List" }' />
 
 <div class="page-content">
     <form method="post" class="form-horizontal">

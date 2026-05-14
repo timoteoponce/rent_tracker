@@ -1,15 +1,18 @@
 @page
 @model RentTracker.Web.Pages.Properties.IndexModel
+@using RentTracker.Web.Models
 @{
     ViewData["Title"] = "Properties";
 }
 
-<div class="page-header">
-    <h2>Properties</h2>
-    <a asp-page="./Create" class="btn btn-primary">Add Property</a>
-</div>
+<partial name="_PageHeader" model='new PageHeaderModel { Title = "Properties", ActionUrl = "./Create", ActionText = "Add Property" }' />
 
 <div class="page-content">
+    @if (!string.IsNullOrEmpty(Model.DeleteErrorMessage))
+    {
+        <div class="alert alert-danger">@Model.DeleteErrorMessage</div>
+    }
+
     @if (Model.Properties.Any())
     {
         <div class="table-container">
@@ -63,6 +66,12 @@
                             <td>
                                 <a asp-page="./Details" asp-route-id="@property.Id" class="btn btn-sm btn-secondary">View</a>
                                 <a asp-page="./Edit" asp-route-id="@property.Id" class="btn btn-sm btn-secondary">Edit</a>
+                                <form method="post" asp-page-handler="Delete" class="d-inline">
+                                    <input type="hidden" name="id" value="@property.Id" />
+                                    <button type="submit" class="btn btn-sm btn-danger" data-confirm="Are you sure you want to delete property '@property.Name'? This will also delete all units and price history.">
+                                        Delete
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                     }
@@ -72,6 +81,6 @@
     }
     else
     {
-        <p class="text-muted">No properties found. <a asp-page="./Create">Add your first property</a>.</p>
+        <partial name="_EmptyState" model='new EmptyStateModel { Message = "No properties found.", ActionUrl = "./Create", ActionText = "Add your first property" }' />
     }
 </div>

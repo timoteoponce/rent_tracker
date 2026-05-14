@@ -116,7 +116,7 @@ public class CreateModel : PageModel
         var leaseList = leases.Select(l => new
         {
             Id = l.Id,
-            DisplayText = $"{l.Property.Name} - {(l.PropertyUnit != null ? l.PropertyUnit.Name : "Whole Property")} - {l.Tenant.FullName} (Bs. {l.AgreedPrice:N2})"
+            DisplayText = $"{l.Property?.Name ?? "Unknown Property"} - {(l.PropertyUnit != null ? l.PropertyUnit.Name : "Whole Property")} - {l.Tenant?.FullName ?? "Unknown Tenant"} (Bs. {l.AgreedPrice:N2})"
         }).ToList();
 
         ActiveLeases = new SelectList(leaseList, "Id", "DisplayText");

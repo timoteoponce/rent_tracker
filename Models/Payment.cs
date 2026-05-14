@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace RentTracker.Web.Models;
 
@@ -50,6 +51,7 @@ public class Payment
     public Guid LeaseId { get; set; }
 
     // Navigation properties
+    [ValidateNever]
     public Lease Lease { get; set; } = null!;
 }
 
