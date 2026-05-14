@@ -43,10 +43,16 @@ public class RentTrackerDbContext : DbContext
             entity.Property(p => p.Location).HasMaxLength(500);
             entity.Property(p => p.CurrentPrice).HasPrecision(18, 2);
             entity.Property(p => p.CurrentWarranty).HasPrecision(18, 2);
+            entity.Property(p => p.IsPrivate).HasDefaultValue(false);
             
             entity.HasOne(p => p.Owner)
                 .WithMany(u => u.OwnedProperties)
                 .HasForeignKey(p => p.OwnerId)
+                .OnDelete(DeleteBehavior.SetNull);
+            
+            entity.HasOne(p => p.LastEditedBy)
+                .WithMany(u => u.LastEditedProperties)
+                .HasForeignKey(p => p.LastEditedById)
                 .OnDelete(DeleteBehavior.SetNull);
         });
 

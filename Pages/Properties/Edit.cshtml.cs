@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
+using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
 
 namespace RentTracker.Web.Pages.Properties;
@@ -28,6 +29,11 @@ public class EditModel : PageModel
     public bool OriginalCanBeLeasedByUnits { get; set; }
     public List<Guid> LockedUnitIds { get; set; } = new();
 
+    /// <summary>
+    /// Whether the current user is allowed to see and toggle the IsPrivate checkbox.
+    /// </summary>
+    public bool CanTogglePrivacyFlag { get; set; }
+
     public async Task<IActionResult> OnGetAsync(Guid id)
     {
         Property = await _context.Properties
@@ -38,6 +44,16 @@ public class EditModel : PageModel
         {
             return NotFound();
         }
+
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+
+        if (!AuthorizationHelper.CanEditProperty(Property, userId, isAdmin))
+        {
+            return Forbid();
+        }
+
+        CanTogglePrivacyFlag = AuthorizationHelper.CanTogglePrivacy(Property, userId, isAdmin);
 
         OriginalPrice = Property.CurrentPrice;
         OriginalWarranty = Property.CurrentWarranty;
@@ -68,10 +84,22 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnPostAsync(Guid id)
     {
-        ModelState.Remove("Property.Owner");
-        ModelState.Remove("Property.Units");
-        ModelState.Remove("Property.Leases");
-        ModelState.Remove("Property.PriceHistory");
+        // Remove validation for navigation properties - only FK IDs are submitted from form
+        // Use prefix matching because complex navigation properties generate nested ModelState keys
+        // Also remove UnitInputs because empty rows may be submitted, and code validates manually.
+        var keysToRemove = ModelState.Keys
+            .Where(k => k.StartsWith("Property.Owner") ||
+                        k.StartsWith("Property.LastEditedBy") ||
+                        k.StartsWith("Property.Units") ||
+                        k.StartsWith("Property.Leases") ||
+                        k.StartsWith("Property.PriceHistory") ||
+                        k.StartsWith("UnitInputs"))
+            .ToList();
+
+        foreach (var key in keysToRemove)
+        {
+            ModelState.Remove(key);
+        }
 
         if (!ModelState.IsValid)
         {
@@ -86,6 +114,23 @@ public class EditModel : PageModel
         if (propertyToUpdate == null)
         {
             return NotFound();
+        }
+
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+
+        if (!AuthorizationHelper.CanEditProperty(propertyToUpdate, userId, isAdmin))
+        {
+            return Forbid();
+        }
+
+        // If the IsPrivate flag changed, verify the user is allowed to toggle it
+        if (propertyToUpdate.IsPrivate != Property.IsPrivate)
+        {
+            if (!AuthorizationHelper.CanTogglePrivacy(propertyToUpdate, userId, isAdmin))
+            {
+                return Forbid();
+            }
         }
 
         // Track price/warranty changes for history
@@ -121,7 +166,14 @@ public class EditModel : PageModel
         propertyToUpdate.HasSecurity = Property.HasSecurity;
         propertyToUpdate.HasDoorbell = Property.HasDoorbell;
         propertyToUpdate.CanBeLeasedByUnits = Property.CanBeLeasedByUnits;
+        propertyToUpdate.IsPrivate = Property.IsPrivate;
         propertyToUpdate.UpdatedAt = DateTimeOffset.UtcNow;
+
+        // Update the last editor so they retain control over the privacy flag
+        if (userId.HasValue)
+        {
+            propertyToUpdate.LastEditedById = userId.Value;
+        }
 
         // Filter out null entries (can happen when unit rows are removed client-side,
         // creating non-sequential indices that the model binder fills with nulls)

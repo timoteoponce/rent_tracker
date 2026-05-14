@@ -20,6 +20,7 @@
                         <th>Location</th>
                         <th>Price</th>
                         <th>Status</th>
+                        <th>Visibility</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -47,6 +48,16 @@
                                 else
                                 {
                                     <span class="badge badge-danger">Disabled</span>
+                                }
+                            </td>
+                            <td>
+                                @if (property.IsPrivate)
+                                {
+                                    <span class="badge badge-warning">Private</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-info">Public</span>
                                 }
                             </td>
                             <td>

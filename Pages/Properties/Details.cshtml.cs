@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
+using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
 
 namespace RentTracker.Web.Pages.Properties;
@@ -31,6 +32,14 @@ public class DetailsModel : PageModel
             return NotFound();
         }
 
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+
+        if (!AuthorizationHelper.CanViewProperty(Property, userId, isAdmin))
+        {
+            return Forbid();
+        }
+
         // Get lease history - client side sort for DateTimeOffset
         var leasesList = await _context.Leases
             .Include(l => l.Tenant)
@@ -38,7 +47,10 @@ public class DetailsModel : PageModel
             .Where(l => l.PropertyId == id)
             .ToListAsync();
 
+        // Filter leases by visibility rules
+        var isTenant = User.IsInRole(UserRoles.Tenant);
         LeaseHistory = leasesList
+            .Where(l => AuthorizationHelper.CanViewLease(l, userId, isAdmin, isTenant))
             .OrderByDescending(l => l.StartDate)
             .ToList();
 

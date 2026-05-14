@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
+using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
 
 namespace RentTracker.Web.Pages.Reports;
@@ -34,16 +35,24 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+        var isTenant = User.IsInRole(UserRoles.Tenant);
+
         CurrentYear = DateTimeOffset.UtcNow.Year;
 
-        // Property statistics
-        var properties = await _context.Properties.ToListAsync();
+        // Property statistics - filtered by visibility
+        var properties = await _context.Properties
+            .VisibleToUser(userId, isAdmin)
+            .ToListAsync();
         TotalProperties = properties.Count;
         DisabledProperties = properties.Count(p => !p.IsEnabled);
 
-        // Count occupied (has active lease)
+        // Count occupied (has active lease) - filtered by visibility
         var activeLeases = await _context.Leases
+            .Include(l => l.Property)
             .Where(l => l.Status == LeaseStatus.Active)
+            .VisibleToUser(userId, isAdmin, isTenant)
             .ToListAsync();
 
         // Count unique properties with active leases
@@ -51,12 +60,15 @@ public class IndexModel : PageModel
         OccupiedProperties = occupiedPropertyIds.Count;
         AvailableProperties = TotalProperties - OccupiedProperties - DisabledProperties;
 
-        // Monthly revenue for current year
+        // Monthly revenue for current year - filtered by visibility
         MonthLabels = new List<string> { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
         
         // NOTE: Fetch all payments and filter client-side because SQLite doesn't support DateTimeOffset.Year in LINQ
         var allPaymentsList = await _context.Payments
+            .Include(p => p.Lease)
+            .ThenInclude(l => l.Property)
             .Where(p => p.Status == PaymentStatus.Received)
+            .VisibleToUser(userId, isAdmin, isTenant)
             .ToListAsync();
         
         var payments = allPaymentsList
@@ -78,8 +90,12 @@ public class IndexModel : PageModel
             .Where(p => p.ForPeriod.Month == thisMonth)
             .Sum(p => p.Amount);
 
-        // Payment status counts
-        var allPayments = await _context.Payments.ToListAsync();
+        // Payment status counts - filtered by visibility
+        var allPayments = await _context.Payments
+            .Include(p => p.Lease)
+            .ThenInclude(l => l.Property)
+            .VisibleToUser(userId, isAdmin, isTenant)
+            .ToListAsync();
         PaymentStatusCounts = new List<int>
         {
             allPayments.Count(p => p.Status == PaymentStatus.Pending),
