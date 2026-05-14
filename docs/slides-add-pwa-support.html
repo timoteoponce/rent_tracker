@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Progressive Web Apps: An Alternative to Native Mobile Development</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/theme/white.min.css" />
+    <style>
+        :root {
+            --primary: #2563eb;
+            --accent: #16a34a;
+            --danger: #dc2626;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --bg-light: #f3f4f6;
+        }
+
+        /* Base typography - let reveal.js handle scaling */
+        .reveal h1, .reveal h2, .reveal h3 {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: var(--text);
+            font-weight: 700;
+            text-transform: none;
+            letter-spacing: normal;
+            margin-bottom: 0.4em;
+        }
+        .reveal h1 { font-size: 1.8em; }
+        .reveal h2 { font-size: 1.4em; }
+        .reveal h3 { font-size: 1em; }
+        .reveal p, .reveal li { font-family: 'Segoe UI', system-ui, sans-serif; }
+
+        /* Slide backgrounds */
+        .reveal .slides section.title-slide {
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+        }
+        .reveal .slides section.title-slide h1,
+        .reveal .slides section.title-slide h2,
+        .reveal .slides section.title-slide p { color: white; }
+
+        .reveal .slides section.accent-slide {
+            background: linear-gradient(135deg, #059669 0%, #16a34a 100%);
+        }
+        .reveal .slides section.accent-slide h1,
+        .reveal .slides section.accent-slide h2,
+        .reveal .slides section.accent-slide p,
+        .reveal .slides section.accent-slide li { color: white; }
+
+        /* Footer text - NOT absolute positioned */
+        .footer-text {
+            font-size: 0.5em;
+            color: var(--muted);
+            margin-top: 1.5em;
+        }
+        .title-slide .footer-text { color: rgba(255,255,255,0.7); }
+
+        /* Two column layout */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5em;
+            text-align: left;
+            font-size: 0.75em;
+        }
+        .two-col h3 {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 0.2em;
+            margin-bottom: 0.4em;
+            font-size: 1em;
+        }
+        .two-col ul { margin: 0; padding-left: 1.2em; }
+        .two-col li { margin-bottom: 0.3em; }
+
+        /* Three Pillars - horizontal row */
+        .pillars-row {
+            display: flex;
+            justify-content: center;
+            gap: 1.5em;
+            margin: 1em 0;
+        }
+        .pillar-card {
+            background: white;
+            border-radius: 0.5em;
+            padding: 1em;
+            width: 28%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .pillar-card .pi {
+            width: 50px; height: 50px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 0.5em;
+            font-size: 1.4em;
+            color: white;
+        }
+        .pillar-card .pl { font-size: 0.75em; font-weight: 700; }
+        .pillar-card .pd { font-size: 0.6em; color: var(--muted); margin-top: 0.3em; line-height: 1.3; }
+
+        /* Architecture Diagram */
+        .arch-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5em;
+            margin: 0.8em 0;
+            font-size: 0.7em;
+        }
+        .arch-flow .ab {
+            background: white;
+            border: 2px solid var(--primary);
+            border-radius: 0.4em;
+            padding: 0.5em 0.8em;
+            text-align: center;
+        }
+        .arch-flow .ab .ai { font-size: 1.4em; display: block; }
+        .arch-flow .ab .al { font-size: 0.7em; font-weight: 600; }
+        .arch-flow .aa { font-size: 1.3em; color: var(--primary); }
+        .arch-flow .ab.green { border-color: var(--accent); background: #f0fdf4; }
+        .arch-flow .ab.purple { border-color: #9333ea; background: #faf5ff; }
+
+        /* Feature Grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5em;
+            margin: 0.5em 0;
+        }
+        .feature-cell {
+            background: white;
+            border-radius: 0.4em;
+            padding: 0.5em;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            border-top: 2px solid var(--primary);
+            text-align: center;
+        }
+        .feature-cell .fi { font-size: 1.3em; display: block; margin-bottom: 0.2em; }
+        .feature-cell .ft { font-size: 0.55em; font-weight: 700; }
+        .feature-cell .fd { font-size: 0.5em; color: var(--muted); }
+
+        /* Timeline - simple flex row */
+        .timeline-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.3em;
+            margin: 0.8em 0;
+            position: relative;
+        }
+        .timeline-row::before {
+            content: '';
+            position: absolute;
+            top: 14px;
+            left: 5%;
+            right: 5%;
+            height: 2px;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            z-index: 0;
+        }
+        .t-event {
+            text-align: center;
+            width: 15%;
+            position: relative;
+            z-index: 1;
+        }
+        .t-event .tdot {
+            width: 12px; height: 12px;
+            background: var(--primary);
+            border-radius: 50%;
+            margin: 0 auto 0.3em;
+            border: 2px solid white;
+            box-shadow: 0 0 0 1px var(--primary);
+        }
+        .t-event .ty { font-size: 0.6em; font-weight: 700; color: var(--primary); }
+        .t-event .tt { font-size: 0.5em; color: var(--text); line-height: 1.3; display: block; }
+
+        /* Comparison Matrix */
+        .viz-matrix {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 0.2em;
+            margin: 0.5em 0;
+            font-size: 0.55em;
+        }
+        .viz-matrix .mh {
+            background: var(--primary); color: white;
+            padding: 0.4em; border-radius: 0.2em;
+            font-weight: 700; text-align: center;
+        }
+        .viz-matrix .ml {
+            background: var(--bg-light); padding: 0.4em;
+            border-radius: 0.2em; font-weight: 600; text-align: left;
+        }
+        .viz-matrix .mc {
+            padding: 0.4em; border-radius: 0.2em;
+            text-align: center; font-weight: 600;
+        }
+        .viz-matrix .mc.good { background: #dcfce7; color: #166534; }
+        .viz-matrix .mc.bad  { background: #fee2e2; color: #991b1b; }
+        .viz-matrix .mc.ok   { background: #fef9c3; color: #854d0e; }
+
+        /* Performance - two boxes */
+        .perf-boxes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1em;
+            margin: 0.8em 0;
+            font-size: 0.7em;
+        }
+        .perf-box {
+            background: white;
+            border-radius: 0.5em;
+            padding: 0.8em;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            text-align: left;
+        }
+        .perf-box h4 {
+            font-size: 0.9em;
+            margin-bottom: 0.4em;
+            padding-bottom: 0.2em;
+            border-bottom: 2px solid;
+        }
+        .perf-box.pwa-box h4 { color: var(--accent); border-color: var(--accent); }
+        .perf-box.nat-box h4 { color: var(--danger); border-color: var(--danger); }
+        .perf-box ul { margin: 0; padding-left: 1.2em; font-size: 0.9em; }
+        .perf-box li { margin-bottom: 0.2em; }
+
+        /* Stat cards */
+        .stat-row {
+            display: flex;
+            justify-content: center;
+            gap: 1em;
+            margin: 0.5em 0;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 0.5em;
+            padding: 0.8em;
+            width: 30%;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-card .num { font-size: 1.6em; font-weight: 700; color: var(--primary); display: block; }
+        .stat-card .lab { font-size: 0.6em; color: var(--muted); }
+
+        /* Cost bars */
+        .cost-chart { margin: 0.5em 0; font-size: 0.7em; }
+        .cost-row {
+            display: flex; align-items: center;
+            margin-bottom: 0.4em; gap: 0.6em;
+        }
+        .cost-name { width: 100px; font-weight: 600; text-align: right; font-size: 0.9em; }
+        .cost-track { flex: 1; height: 22px; background: var(--bg-light); border-radius: 11px; overflow: hidden; }
+        .cost-fill { height: 100%; border-radius: 11px; display: flex; align-items: center; justify-content: flex-end; padding-right: 0.5em; color: white; font-size: 0.8em; font-weight: 600; }
+        .cost-fill.pwa { background: var(--accent); }
+        .cost-fill.rn  { background: var(--primary); }
+        .cost-fill.nat { background: var(--danger); }
+        .cost-val { width: 70px; font-size: 0.8em; color: var(--muted); }
+
+        /* Bar chart for distribution */
+        .bar-chart { margin: 0.5em 0; font-size: 0.7em; }
+        .bar-row { display: flex; align-items: center; margin-bottom: 0.4em; }
+        .bar-label { width: 130px; text-align: right; padding-right: 0.5em; flex-shrink: 0; }
+        .bar-track { flex: 1; background: var(--bg-light); border-radius: 0.2em; height: 20px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 0.2em; display: flex; align-items: center; justify-content: flex-end; padding-right: 0.4em; color: white; font-size: 0.8em; font-weight: 600; }
+        .bar-fill.pwa { background: var(--accent); }
+        .bar-fill.native { background: var(--primary); }
+
+        /* Decision Flowchart - simplified 2-col */
+        .decision-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.8em;
+            margin: 0.5em 0;
+            font-size: 0.7em;
+        }
+        .decision-q {
+            background: #eff6ff;
+            border: 2px solid var(--primary);
+            border-radius: 0.4em;
+            padding: 0.5em;
+            text-align: center;
+            font-weight: 600;
+        }
+        .decision-a {
+            background: #dcfce7;
+            border: 2px solid var(--accent);
+            border-radius: 0.4em;
+            padding: 0.5em;
+            text-align: center;
+            font-weight: 600;
+            color: #166534;
+        }
+        .decision-a.nat {
+            background: #fee2e2;
+            border-color: var(--danger);
+            color: #991b1b;
+        }
+
+        /* System Architecture */
+        .sys-arch {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3em;
+            margin: 0.5em 0;
+            font-size: 0.65em;
+        }
+        .sys-layer {
+            display: flex;
+            gap: 0.5em;
+            justify-content: center;
+        }
+        .sys-box {
+            border: 2px solid;
+            border-radius: 0.4em;
+            padding: 0.4em 0.8em;
+            text-align: center;
+            font-weight: 600;
+        }
+        .sys-box.pwa { border-color: var(--accent); color: var(--accent); background: #f0fdf4; }
+        .sys-box.srv { border-color: #9333ea; color: #9333ea; }
+        .sys-box.web { border-color: var(--primary); color: var(--primary); }
+        .sys-arrow { color: var(--muted); font-size: 1.2em; }
+        .sys-label { font-size: 0.7em; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+
+        /* Demo links */
+        .demo-links { margin-top: 1em; }
+        .demo-link {
+            display: inline-block;
+            background: white;
+            color: var(--primary);
+            padding: 0.6em 1.2em;
+            border-radius: 0.4em;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 0.3em;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-size: 0.75em;
+        }
+
+        /* Success stories compact */
+        .success-row {
+            display: flex;
+            justify-content: center;
+            gap: 1em;
+            margin: 0.5em 0;
+        }
+        .success-card {
+            background: white;
+            border-radius: 0.5em;
+            padding: 0.8em;
+            width: 30%;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        .success-card h4 { font-size: 0.8em; margin-bottom: 0.3em; }
+        .success-card .sn { font-size: 1.4em; font-weight: 700; color: var(--primary); }
+        .success-card .sl { font-size: 0.6em; color: var(--muted); }
+
+        .reveal .progress { background: rgba(0,0,0,0.1); }
+        .reveal .progress span { background: var(--primary); }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+
+            <!-- Slide 1: Title -->
+            <section class="title-slide">
+                <h1 style="margin-bottom: 0.2em;">Progressive Web Apps</h1>
+                <h2 style="font-weight: 300; font-size: 1.1em;">An Alternative to Native Mobile Development</h2>
+                <p style="margin-top: 1.5em; font-size: 0.8em;">Teaching Mobile Development &mdash; Exploring PWA as a viable path</p>
+                <p class="footer-text">Press arrow keys or space to navigate</p>
+                <aside class="notes">
+                    Welcome everyone. This is a 20-25 minute session on Progressive Web Apps as a modern alternative to native Android and React Native development. We're going to cover the basics, compare all three approaches with real data, and end with a live demo of a real application. Press the S key at any time to open the speaker notes view.
+                </aside>
+            </section>
+
+            <!-- Slide 2: About -->
+            <section>
+                <h2>About This Session</h2>
+                <div class="two-col">
+                    <div>
+                        <h3>Context</h3>
+                        <ul>
+                            <li>Teaching mobile development with Android</li>
+                            <li>Some students using React Native</li>
+                            <li>Goal: Show a third, modern alternative</li>
+                            <li>PWAs: web tech that feels native</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3>What We Will Cover</h3>
+                        <ul>
+                            <li>PWA fundamentals</li>
+                            <li>Comparison: PWA vs Native vs React Native</li>
+                            <li>Market data: when to choose what</li>
+                            <li>Live demo with a real application</li>
+                        </ul>
+                    </div>
+                </div>
+                <aside class="notes">
+                    Set the context: you are teaching mobile dev and your students know Android (Kotlin/Java) and some know React Native. The goal today is to introduce a third path that uses pure web technologies. Emphasize that this is not about replacing what they know, but expanding their toolkit. Ask: "How many of you have heard of PWAs?"
+                </aside>
+            </section>
+
+            <!-- Slide 3: Objectives -->
+            <section>
+                <h2>Learning Objectives</h2>
+                <ul style="font-size: 0.8em; line-height: 1.8;">
+                    <li class="fragment">Understand what a <strong>Progressive Web App</strong> is and how it works</li>
+                    <li class="fragment">Compare PWAs against <strong>Native Android</strong> and <strong>React Native</strong></li>
+                    <li class="fragment">Use <strong>data-driven insights</strong> to decide when to build native vs. PWA</li>
+                    <li class="fragment">See a <strong>real-world demo</strong> of a PWA built with .NET and deployed live</li>
+                </ul>
+                <aside class="notes">
+                    Walk through each objective. The first two are foundational. The third is the most important: by the end of this talk, they should be able to look at a project idea and decide whether PWA, React Native, or Native is the right choice. The demo at the end will show that a PWA can be built with the same backend stack they already know (.NET + Razor Pages).
+                </aside>
+            </section>
+
+            <!-- Slide 4: What is a PWA? -->
+            <section>
+                <h2>What is a Progressive Web App?</h2>
+                <p style="font-size: 0.75em; color: var(--muted); margin-bottom: 0.8em;">A web app that uses modern browser features to feel like a native app</p>
+                <div class="arch-flow">
+                    <div class="ab"><span class="ai">&#60;&#47;&#62;</span><span class="al">HTML</span></div>
+                    <div class="ab"><span class="ai" style="color:#2563eb;">&#123;&#125;</span><span class="al">CSS</span></div>
+                    <div class="ab"><span class="ai" style="color:#f59e0b;">&#9889;</span><span class="al">JS</span></div>
+                    <span class="aa">&#10142;</span>
+                    <div class="ab green"><span class="ai">&#127760;</span><span class="al">Browser</span></div>
+                    <span class="aa">&#10142;</span>
+                    <div class="ab purple"><span class="ai">&#128241;</span><span class="al">App Feel</span></div>
+                </div>
+                <div class="two-col" style="margin-top: 0.5em; font-size: 0.7em;">
+                    <div style="background: var(--bg-light); padding: 0.6em; border-radius: 0.4em;">
+                        <strong style="color: var(--primary);">No app store required</strong><br/>
+                        <span style="color: var(--muted);">Install from browser via "Add to Home Screen"</span>
+                    </div>
+                    <div style="background: var(--bg-light); padding: 0.6em; border-radius: 0.4em;">
+                        <strong style="color: var(--accent);">One codebase, all platforms</strong><br/>
+                        <span style="color: var(--muted);">Android, iOS, Windows, macOS, ChromeOS</span>
+                    </div>
+                </div>
+                <aside class="notes">
+                    Key message: A PWA is just a website that uses modern browser APIs to feel like an app. The students already know HTML, CSS, and JavaScript. No new language, no Android SDK, no Xcode. Point out the diagram: the same web technologies they use for any site, fed through the browser engine, producing an app-like experience. The two callouts are critical: no app store means no review delays, no 30% fees, and no gatekeeping. One codebase means they build once and it works on every device.
+                </aside>
+            </section>
+
+            <!-- Slide 5: Three Pillars -->
+            <section>
+                <h2>The Three Pillars of PWAs</h2>
+                <div class="pillars-row fragment">
+                    <div class="pillar-card">
+                        <div class="pi">&#128187;</div>
+                        <div class="pl">Service Workers</div>
+                        <div class="pd">Background JS that caches assets and enables offline</div>
+                    </div>
+                    <div class="pillar-card">
+                        <div class="pi">&#128196;</div>
+                        <div class="pl">Web App Manifest</div>
+                        <div class="pd">JSON metadata: icon, theme, display mode, start URL</div>
+                    </div>
+                    <div class="pillar-card">
+                        <div class="pi">&#128274;</div>
+                        <div class="pl">HTTPS</div>
+                        <div class="pd">Secure connection required for SW and push</div>
+                    </div>
+                </div>
+                <p style="font-size: 0.7em; color: var(--muted); margin-top: 0.5em;">All three must be present for the browser to treat your site as a PWA.</p>
+                <aside class="notes">
+                    These three things are the ONLY technical requirements for a PWA. Service Workers are the magic: a JavaScript file that runs in the background, intercepts network requests, and decides whether to serve from cache or fetch from the network. The Manifest is just a JSON file — name, icons, colors. HTTPS is a hard requirement; without it, the browser refuses to register a Service Worker. Emphasize: if you can add these three things to an existing website, it becomes a PWA. That's how simple the barrier is.
+                </aside>
+            </section>
+
+            <!-- Slide 6: Core Features -->
+            <section>
+                <h2>Core PWA Features</h2>
+                <div class="feature-grid">
+                    <div class="feature-cell fragment"><span class="fi">&#128241;</span><span class="ft">Responsive</span><span class="fd">Any screen</span></div>
+                    <div class="feature-cell fragment"><span class="fi">&#128204;</span><span class="ft">Installable</span><span class="fd">No store needed</span></div>
+                    <div class="feature-cell fragment"><span class="fi">&#128189;</span><span class="ft">Offline</span><span class="fd">No network</span></div>
+                    <div class="feature-cell fragment"><span class="fi">&#128276;</span><span class="ft">Push</span><span class="fd">Notifications</span></div>
+                    <div class="feature-cell fragment"><span class="fi">&#128279;</span><span class="ft">Linkable</span><span class="fd">Share URLs</span></div>
+                    <div class="feature-cell fragment"><span class="fi">&#128260;</span><span class="ft">Instant Updates</span><span class="fd">No review</span></div>
+                    <div class="feature-cell fragment"><span class="fi">&#128269;</span><span class="ft">Discoverable</span><span class="fd">SEO-friendly</span></div>
+                    <div class="feature-cell fragment"><span class="fi">&#128274;</span><span class="ft">Secure</span><span class="fd">HTTPS only</span></div>
+                </div>
+                <aside class="notes">
+                    Go through the grid quickly — this is more about impression than detail. Highlight three that students care about most: Installable (no store), Offline (works on flaky campus WiFi), and Instant Updates (push code, users get it immediately). Linkable is also important: unlike native apps, every screen in a PWA has a URL you can share. Discoverable means Google can index it — free organic traffic. Spend about 1 minute here, then move on.
+                </aside>
+            </section>
+
+            <!-- Slide 7: History -->
+            <section>
+                <h2>A Brief History of PWAs</h2>
+                <div class="timeline-row fragment">
+                    <div class="t-event"><div class="tdot"></div><span class="ty">2015</span><span class="tt">Term "PWA" coined</span></div>
+                    <div class="t-event"><div class="tdot"></div><span class="ty">2015</span><span class="tt">Service Workers ship</span></div>
+                    <div class="t-event"><div class="tdot"></div><span class="ty">2017</span><span class="tt">Twitter Lite, -70% data</span></div>
+                    <div class="t-event"><div class="tdot"></div><span class="ty">2018</span><span class="tt">Pinterest +60% engagement</span></div>
+                    <div class="t-event"><div class="tdot"></div><span class="ty">2023</span><span class="tt">iOS adds web push</span></div>
+                    <div class="t-event"><div class="tdot"></div><span class="ty">2026</span><span class="tt">First-class on all OS</span></div>
+                </div>
+                <p style="font-size: 0.7em; color: var(--muted); margin-top: 0.8em;">In 11 years, PWAs went from experiment to standard on every major platform.</p>
+                <aside class="notes">
+                    Walk the timeline left to right. The 2017 Twitter Lite milestone is huge: they replaced their native app in some markets with a PWA and saw a 70% drop in data usage and 65% more pages per session. The 2023 iOS web push support is the turning point: before this, iOS was the big gap. Now every major platform supports PWAs fully. Mention that today (2026), PWAs are treated as first-class citizens on Android, iOS, Windows, macOS, and ChromeOS.
+                </aside>
+            </section>
+
+            <!-- Slide 8: Native Android -->
+            <section>
+                <h2>What is Native Android?</h2>
+                <div class="two-col">
+                    <div>
+                        <h3>Technology</h3>
+                        <ul><li>Kotlin or Java</li><li>Android SDK</li><li>XML layouts</li><li>Gradle build</li></ul>
+                        <h3>Distribution</h3>
+                        <ul><li>Google Play Store</li><li>App review process</li><li>30% store fee</li></ul>
+                    </div>
+                    <div>
+                        <h3>Strengths</h3>
+                        <ul><li>Maximum performance</li><li>Full hardware access</li><li>Deep OS integration</li><li>Store discoverability</li></ul>
+                        <h3>Weaknesses</h3>
+                        <ul><li>iOS needs separate build</li><li>Longer dev cycles</li><li>Approval delays</li><li>Higher cost</li></ul>
+                    </div>
+                </div>
+                <aside class="notes">
+                    Ask the room: "Who here has built a native Android app?" Acknowledge that native Android is powerful — Kotlin is a great language, and you get full access to every hardware sensor. But the big pain points are on the right side: if you want iOS users too, you need to learn Swift and maintain a second codebase. The Play Store review process can take days. And the 30% fee on in-app purchases is real money. Native is the right choice for some apps, but not all.
+                </aside>
+            </section>
+
+            <!-- Slide 9: React Native -->
+            <section>
+                <h2>What is React Native?</h2>
+                <div class="two-col">
+                    <div>
+                        <h3>Technology</h3>
+                        <ul><li>JavaScript / TypeScript</li><li>React framework</li><li>Native bridge</li><li>Metro bundler</li></ul>
+                        <h3>Distribution</h3>
+                        <ul><li>Google Play + App Store</li><li>Review for both</li><li>Store fees apply</li></ul>
+                    </div>
+                    <div>
+                        <h3>Strengths</h3>
+                        <ul><li>One codebase, 2 platforms</li><li>Near-native perf</li><li>Large npm ecosystem</li><li>Hot reload</li></ul>
+                        <h3>Weaknesses</h3>
+                        <ul><li>Bridge overhead</li><li>Native modules needed</li><li>Meta dependency</li><li>Store bureaucracy</li></ul>
+                    </div>
+                </div>
+                <aside class="notes">
+                    Ask: "Who has used React Native?" React Native is the middle ground: one codebase for Android and iOS, which is a huge win. But the bridge concept is important to explain: your JavaScript talks to native code through a bridge, and that bridge has overhead. For simple UIs you won't notice, but for complex animations or heavy computation, you might. Also, you still deal with app stores — review processes, rejections, update delays. And if Meta ever changes priorities, the ecosystem shifts. It's a solid choice, but it inherits some of native's pain points.
+                </aside>
+            </section>
+
+            <!-- Slide 10: Comparison -->
+            <section>
+                <h2>PWA vs Native vs React Native</h2>
+                <div class="viz-matrix fragment">
+                    <div class="mh">Feature</div><div class="mh">PWA</div><div class="mh">Native</div><div class="mh">React Native</div>
+                    <div class="ml">One Codebase</div><div class="mc good">&#10004;</div><div class="mc bad">&#10008;</div><div class="mc good">&#10004;</div>
+                    <div class="ml">No App Store</div><div class="mc good">&#10004;</div><div class="mc bad">&#10008;</div><div class="mc bad">&#10008;</div>
+                    <div class="ml">Instant Updates</div><div class="mc good">&#10004;</div><div class="mc bad">&#10008;</div><div class="mc bad">&#10008;</div>
+                    <div class="ml">Offline Support</div><div class="mc good">&#10004;</div><div class="mc good">&#10004;</div><div class="mc good">&#10004;</div>
+                    <div class="ml">Push Notifications</div><div class="mc good">&#10004;</div><div class="mc good">&#10004;</div><div class="mc good">&#10004;</div>
+                    <div class="ml">Full Hardware</div><div class="mc ok">~</div><div class="mc good">&#10004;</div><div class="mc good">&#10004;</div>
+                    <div class="ml">Max Performance</div><div class="mc ok">~</div><div class="mc good">&#10004;</div><div class="mc good">&#10004;</div>
+                    <div class="ml">Low Cost</div><div class="mc good">$</div><div class="mc bad">$$$</div><div class="mc ok">$$</div>
+                    <div class="ml">Fast to Market</div><div class="mc good">&#10004;</div><div class="mc bad">&#10008;</div><div class="mc ok">~</div>
+                </div>
+                <p style="font-size: 0.6em; color: var(--muted); margin-top: 0.5em;">
+                    <span style="color: var(--accent);">&#10004;</span> = Full &nbsp;|&nbsp; <span style="color: #ca8a04;">~</span> = Partial &nbsp;|&nbsp; <span style="color: var(--danger);">&#10008;</span> = None
+                </p>
+                <aside class="notes">
+                    Walk through the matrix row by row. The three green checkmarks for PWA that matter most: No App Store, Instant Updates, and Low Cost. These are the business differentiators. Note that offline support and push notifications are now table stakes — all three approaches handle them. The two yellow tildes for PWA are hardware access and max performance; that's the trade-off. But as we'll see on the next slide, that trade-off doesn't matter for 80% of apps.
+                </aside>
+            </section>
+
+            <!-- Slide 11: Performance -->
+            <section>
+                <h2>Performance: When It Matters</h2>
+                <div class="perf-boxes">
+                    <div class="perf-box pwa-box fragment">
+                        <h4>&#128077; PWA is Perfect For</h4>
+                        <ul><li>Content &amp; news apps</li><li>E-commerce &amp; shopping</li><li>Dashboards &amp; admin panels</li><li>Booking &amp; reservations</li><li>SaaS &amp; documentation</li></ul>
+                    </div>
+                    <div class="perf-box nat-box fragment">
+                        <h4>&#128170; Native Still Wins</h4>
+                        <ul><li>3D / AR / VR games</li><li>Video editing &amp; rendering</li><li>Real-time audio processing</li><li>Complex sensor fusion</li><li>Console-grade graphics</li></ul>
+                    </div>
+                </div>
+                <p style="font-size: 0.7em; color: var(--muted); margin-top: 0.5em; font-style: italic;">For 80%+ of business apps, the performance difference is imperceptible.</p>
+                <aside class="notes">
+                    This is the most important slide for students who are worried that PWA means "slow web app." Emphasize the 80% rule: if the app is about displaying and interacting with data — lists, forms, charts, text, images — the user cannot tell the difference between a PWA and a native app. The browser engine is highly optimized. The right column is the exception list: only apps that push hardware to its absolute limit truly need native. Ask students: what kind of app do YOU want to build? Is it on the left or the right?
+                </aside>
+            </section>
+
+            <!-- Slide 12: Cost & Time -->
+            <section>
+                <h2>Cost &amp; Time to Market</h2>
+                <div class="stat-row">
+                    <div class="stat-card fragment"><span class="num">40&ndash;60%</span><span class="lab">Lower cost vs native</span></div>
+                    <div class="stat-card fragment"><span class="num">68%</span><span class="lab">Traffic increase</span></div>
+                    <div class="stat-card fragment"><span class="num">15&times;</span><span class="lab">Faster load</span></div>
+                </div>
+                <div class="cost-chart fragment" style="margin-top: 0.8em;">
+                    <div class="cost-row"><div class="cost-name">PWA</div><div class="cost-track"><div class="cost-fill pwa" style="width: 33%;">$10k&ndash;$30k</div></div><div class="cost-val">6&ndash;12 wks</div></div>
+                    <div class="cost-row"><div class="cost-name">React Native</div><div class="cost-track"><div class="cost-fill rn" style="width: 66%;">$25k&ndash;$60k</div></div><div class="cost-val">3&ndash;5 mo</div></div>
+                    <div class="cost-row"><div class="cost-name">Native</div><div class="cost-track"><div class="cost-fill nat" style="width: 100%;">$30k&ndash;$90k</div></div><div class="cost-val">4&ndash;8 mo</div></div>
+                </div>
+                <p style="font-size: 0.6em; color: var(--muted);">Source: Sechak, CISIN, Apptage 2025/2026</p>
+                <aside class="notes">
+                    The bar chart tells the story visually: PWA is roughly one-third the cost and one-third the time of native development. For students building portfolio projects or startups, this is huge. The 68% traffic increase stat comes from Google: companies that launched PWAs saw their mobile traffic jump because PWAs are indexed by search engines — users find them via Google, not just the app store. The 15x faster load is versus a traditional mobile website, not native. Emphasize: cheaper, faster, AND discoverable.
+                </aside>
+            </section>
+
+            <!-- Slide 13: Market -->
+            <section>
+                <h2>The PWA Market is Growing Fast</h2>
+                <div class="stat-row">
+                    <div class="stat-card fragment"><span class="num">$3.3B</span><span class="lab">Market value (2023)</span></div>
+                    <div class="stat-card fragment"><span class="num">$9.4B</span><span class="lab">Projected by 2030</span></div>
+                    <div class="stat-card fragment"><span class="num">31.1%</span><span class="lab">Annual growth rate</span></div>
+                </div>
+                <p style="font-size: 0.75em; color: var(--muted); margin-top: 1em;">Major adopters: Twitter, Pinterest, Starbucks, Forbes, Uber</p>
+                <aside class="notes">
+                    These numbers prove this is not a fad. A 31% compound annual growth rate means the PWA market is roughly tripling between 2023 and 2030. The companies listed are not small startups — these are billion-dollar businesses that made a calculated decision. Twitter built Twitter Lite for emerging markets with slow connections. Starbucks built a PWA so customers could order offline and sync when connected. Uber's PWA is 50KB and loads in 3 seconds on 2G. Real companies, real money, real results.
+                </aside>
+            </section>
+
+            <!-- Slide 14: Distribution -->
+            <section>
+                <h2>What Really Needs to Be Native?</h2>
+                <p style="font-size: 0.75em; color: var(--muted); margin-bottom: 0.5em;">Estimated distribution by app category</p>
+                <div class="bar-chart">
+                    <div class="bar-row fragment"><div class="bar-label">Content &amp; SaaS</div><div class="bar-track"><div class="bar-fill pwa" style="width: 95%;">95%</div></div></div>
+                    <div class="bar-row fragment"><div class="bar-label">E-commerce</div><div class="bar-track"><div class="bar-fill pwa" style="width: 90%;">90%</div></div></div>
+                    <div class="bar-row fragment"><div class="bar-label">Booking &amp; Events</div><div class="bar-track"><div class="bar-fill pwa" style="width: 85%;">85%</div></div></div>
+                    <div class="bar-row fragment"><div class="bar-label">Social &amp; Messaging</div><div class="bar-track"><div class="bar-fill pwa" style="width: 75%;">75%</div></div></div>
+                    <div class="bar-row fragment"><div class="bar-label">Productivity &amp; Tools</div><div class="bar-track"><div class="bar-fill pwa" style="width: 70%;">70%</div></div></div>
+                    <div class="bar-row fragment"><div class="bar-label">AR / VR / 3D</div><div class="bar-track"><div class="bar-fill native" style="width: 95%;">95% Native</div></div></div>
+                    <div class="bar-row fragment"><div class="bar-label">Mobile Games</div><div class="bar-track"><div class="bar-fill native" style="width: 98%;">98% Native</div></div></div>
+                </div>
+                <p style="font-size: 0.65em; color: var(--muted); margin-top: 0.5em;"><em>Estimates from App Annie / data.ai and PWA industry case studies</em></p>
+                <aside class="notes">
+                    The green bars are the apps that work perfectly as PWAs. Notice that the majority of real-world business apps — e-commerce, booking, content, productivity — are overwhelmingly PWA-suitable. Only the bottom two categories (AR/VR and games) genuinely need native. Ask students to think about what THEY want to build. If it's a social app for their campus, a store for their family business, or a dashboard for their internship — it's probably in the green zone.
+                </aside>
+            </section>
+
+            <!-- Slide 15: PWA Candidates -->
+            <section>
+                <h2>Apps That Work Great as PWAs</h2>
+                <div class="two-col">
+                    <div>
+                        <h3 style="color: var(--accent);">Ideal Candidates</h3>
+                        <ul><li>E-commerce stores</li><li>News &amp; content platforms</li><li>Dashboards &amp; admin tools</li><li>Booking &amp; reservations</li><li>Customer portals</li><li>Documentation &amp; wikis</li></ul>
+                    </div>
+                    <div>
+                        <h3 style="color: var(--primary);">Why They Fit</h3>
+                        <ul><li>Content-driven, not compute-heavy</li><li>Users value speed</li><li>SEO matters</li><li>Frequent updates needed</li><li>Cross-platform priority</li><li>Budget constraints</li></ul>
+                    </div>
+                </div>
+                <aside class="notes">
+                    These are the categories where PWAs have the strongest track record. E-commerce is the biggest: companies like Alibaba, Flipkart, and Forbes all saw massive conversion rate improvements after switching to PWA. Dashboards and admin tools are perfect because the users are on laptops and phones, and the developers need to ship updates constantly. Documentation sites benefit enormously from SEO — a native app can't be found via Google search. Encourage students to match their project ideas against this list.
+                </aside>
+            </section>
+
+            <!-- Slide 16: Native Required -->
+            <section>
+                <h2>Apps That Still Need Native</h2>
+                <div class="two-col">
+                    <div>
+                        <h3 style="color: var(--danger);">Stick with Native</h3>
+                        <ul><li>High-performance 3D games</li><li>Augmented / Virtual Reality</li><li>Real-time video/audio processing</li><li>Deep Bluetooth / NFC</li><li>Complex sensor fusion</li><li>Store billing requirement</li></ul>
+                    </div>
+                    <div>
+                        <h3 style="color: var(--primary);">The Rule of Thumb</h3>
+                        <p style="background: var(--bg-light); padding: 0.8em; border-radius: 0.4em; line-height: 1.6;">
+                            <strong>If your app displays and interacts with data</strong>
+                            &mdash; forms, lists, charts, text, images &mdash;
+                            <strong style="color: var(--accent);">a PWA is almost always sufficient.</strong>
+                        </p>
+                    </div>
+                </div>
+                <aside class="notes">
+                    This is the honest side of the comparison. PWAs are not a silver bullet. If you're building a game that needs 60fps 3D rendering, or an app that pairs with a Bluetooth medical device, native is still the right choice. The rule of thumb in the right column is the key takeaway of the entire presentation: if your app is about data — displaying it, collecting it, reporting on it — a PWA is almost always sufficient. That describes the vast majority of student projects and business apps.
+                </aside>
+            </section>
+
+            <!-- Slide 17: Success Stories -->
+            <section>
+                <h2>Real-World Success Stories</h2>
+                <div class="success-row">
+                    <div class="stat-card fragment">
+                        <h4 style="margin-bottom: 0.3em;">Twitter Lite</h4>
+                        <span class="num" style="font-size: 1.4em;">70%</span>
+                        <span class="lab">Less data used<br/>+65% pages/session</span>
+                    </div>
+                    <div class="stat-card fragment">
+                        <h4 style="margin-bottom: 0.3em;">Pinterest</h4>
+                        <span class="num" style="font-size: 1.4em;">60%</span>
+                        <span class="lab">More engagement<br/>+44% ad revenue</span>
+                    </div>
+                    <div class="stat-card fragment">
+                        <h4 style="margin-bottom: 0.3em;">Starbucks</h4>
+                        <span class="num" style="font-size: 1.4em;">2&times;</span>
+                        <span class="lab">Daily active users<br/>Offline ordering</span>
+                    </div>
+                </div>
+                <p style="font-size: 0.7em; color: var(--muted); margin-top: 0.8em;">Companies switched to PWAs to improve performance, reduce cost, and reach users faster.</p>
+                <aside class="notes">
+                    These are the proof points. Twitter Lite was specifically built for emerging markets where data is expensive and phones are low-end. The PWA was under 1MB and loaded almost instantly. Pinterest rebuilt their mobile web experience as a PWA and saw time spent increase by 40%. Starbucks' PWA lets you browse the menu and customize orders while offline — it syncs when you reconnect. All three replaced or supplemented their native apps with PWAs. Not because they couldn't afford native, but because PWA was the better business choice.
+                </aside>
+            </section>
+
+            <!-- Slide 18: Decision Framework -->
+            <section>
+                <h2>Decision Framework</h2>
+                <div class="decision-grid fragment">
+                    <div class="decision-q">Need deep hardware?<br/><small>(Bluetooth, NFC, AR/VR)</small></div>
+                    <div class="decision-a nat">Native</div>
+                    <div class="decision-q">Speed-to-market critical?</div>
+                    <div class="decision-a">PWA</div>
+                    <div class="decision-q">Need app store presence?</div>
+                    <div class="decision-a">React Native</div>
+                    <div class="decision-q">SEO matters for growth?</div>
+                    <div class="decision-a">PWA</div>
+                </div>
+                <p style="font-size: 0.7em; color: var(--muted); margin-top: 0.5em;">Start with the left column. If the answer is <strong>yes</strong>, follow the right column.</p>
+                <aside class="notes">
+                    This is the practical takeaway students should screenshot or write down. Walk through each question: deep hardware means sensors the web API can't access yet. Speed-to-market means MVPs, hackathons, and class projects — PWA wins every time. App store presence is a marketing/branding decision; if your client insists on being in the Play Store, React Native is the cheaper cross-platform option. SEO matters for user acquisition — if people find you via Google search, PWA is the only choice among these three. This grid covers 90% of real-world decisions.
+                </aside>
+            </section>
+
+            <!-- Slide 19: Demo -->
+            <section class="accent-slide">
+                <h2>Live Demo: RentTracker PWA</h2>
+                <p style="color: rgba(255,255,255,0.9); font-size: 0.85em; margin: 0.5em 0;">A rental property app built with .NET Razor Pages,<br/>converted to a PWA with just a manifest and a service worker.</p>
+                <div class="demo-links">
+                    <a class="demo-link" href="https://rent-tracker.mirthajimenez.qzz.io/" target="_blank">&#127760; Live Site</a>
+                    <a class="demo-link" href="https://github.com/timoteoponce/rent_tracker/pull/21" target="_blank">&#128187; PR #21</a>
+                </div>
+                <div style="background: rgba(255,255,255,0.15); padding: 1em; border-radius: 0.5em; margin-top: 1em; text-align: left; font-size: 0.75em; max-width: 600px; margin-left: auto; margin-right: auto;">
+                    <strong style="color: white;">What to Look For</strong>
+                    <ul style="color: white; margin: 0.3em 0 0 1.2em; line-height: 1.6;">
+                        <li>Install prompt on Android / "Add to Home Screen" on iOS</li>
+                        <li>Works offline after first visit</li>
+                        <li>Theme color in browser bar</li>
+                        <li>Full-screen mode without browser chrome</li>
+                    </ul>
+                </div>
+                <p class="footer-text">Try it on your phone right now!</p>
+                <aside class="notes">
+                    This is the demo slide. Open the live site on your laptop and ideally on your phone too. Show them the install prompt on Chrome (it should appear as a small icon in the address bar). Scroll through the app, then turn off WiFi and refresh — the offline page should appear. Mention that this was built with .NET Razor Pages, the same stack many of them use. The PWA additions were just a manifest.json file (20 lines) and a service worker (75 lines). The PR on GitHub shows the exact diff. Ask students to open the link on their phones during the break.
+                </aside>
+            </section>
+
+            <!-- Slide 20: Technical Architecture -->
+            <section>
+                <h2>Technical Architecture</h2>
+                <div class="sys-arch fragment">
+                    <div class="sys-label">User</div>
+                    <div class="sys-layer">
+                        <div class="sys-box web">&#128241; Browser / Home Screen</div>
+                    </div>
+                    <div class="sys-arrow">&#8595;</div>
+                    <div class="sys-label">PWA Layer</div>
+                    <div class="sys-layer">
+                        <div class="sys-box pwa">&#128196; manifest.json</div>
+                        <div class="sys-box pwa">&#128187; sw.js</div>
+                        <div class="sys-box pwa">&#128274; HTTPS</div>
+                    </div>
+                    <div class="sys-arrow">&#8595;</div>
+                    <div class="sys-label">Server</div>
+                    <div class="sys-layer">
+                        <div class="sys-box srv">&#9889; .NET 9 Razor Pages</div>
+                        <div class="sys-box srv">&#128190; SQLite</div>
+                    </div>
+                </div>
+                <div class="two-col" style="margin-top: 0.5em; font-size: 0.65em;">
+                    <div style="background: var(--bg-light); padding: 0.5em; border-radius: 0.3em;">
+                        <strong>Files Added:</strong> manifest.json, sw.js, offline.html, icons/
+                    </div>
+                    <div style="background: var(--bg-light); padding: 0.5em; border-radius: 0.3em;">
+                        <strong>Layout Changes:</strong> iOS meta tags, SW registration, update banner
+                    </div>
+                </div>
+                <aside class="notes">
+                    Walk through the diagram top to bottom. The user layer is the same for all three approaches — the user doesn't care about the tech stack. The PWA layer is what makes this special: just three files. The manifest.json tells the browser how to treat the site as an app. The service worker (sw.js) caches static files and handles offline. HTTPS is already required for any modern site. The server layer uses .NET Razor Pages and SQLite — the same stack the students already know. The key insight: you don't need to change your backend to add PWA support.
+                </aside>
+            </section>
+
+            <!-- Slide 21: References -->
+            <section>
+                <h2>References &amp; Further Reading</h2>
+                <ul style="font-size: 0.7em; line-height: 1.7; text-align: left; max-width: 700px; margin: 0.5em auto;">
+                    <li>Notix &mdash; "PWA vs Native Apps: Honest Comparison for 2026"</li>
+                    <li>Progressier &mdash; "PWA vs Native App &mdash; 2026 Comparison Table"</li>
+                    <li>CISIN &mdash; "PWA vs Native Apps: Executive's 2025 Decision Guide"</li>
+                    <li>Apptage &mdash; "Native vs Progressive Web Apps Showdown"</li>
+                    <li>Sechak &mdash; "Native Mobile App vs PWA in 2025"</li>
+                    <li>Google Developers &mdash; Web Fundamentals: Progressive Web Apps</li>
+                    <li>MDN Web Docs &mdash; Progressive Web Apps guides</li>
+                </ul>
+                <aside class="notes">
+                    These are curated sources for students who want to go deeper. The Google Developers and MDN links are the authoritative technical references. The industry reports (Notix, Progressier, CISIN, Apptage, Sechak) contain the market data and cost comparisons used in this presentation. Mention that web.dev has excellent step-by-step tutorials for building your first PWA.
+                </aside>
+            </section>
+
+            <!-- Slide 22: Q&A -->
+            <section>
+                <h2>Q&amp;A / Discussion</h2>
+                <p style="margin-top: 1em; font-size: 1em;">Questions? Thoughts? Let's discuss!</p>
+                <div style="background: var(--bg-light); padding: 1em; border-radius: 0.5em; margin-top: 1em; font-size: 0.75em; max-width: 500px; margin-left: auto; margin-right: auto; text-align: left;">
+                    <strong>Discussion Prompts:</strong>
+                    <ul style="margin: 0.3em 0 0 1.2em;">
+                        <li>Would you choose PWA for your next project?</li>
+                        <li>What barriers do you see for PWA adoption in your region?</li>
+                        <li>How does React Native compare for your use case?</li>
+                    </ul>
+                </div>
+                <aside class="notes">
+                    Leave 3 to 5 minutes for questions. Common questions to expect: "Can PWAs access the camera?" (Yes, via getUserMedia API). "Do PWAs work on iOS?" (Yes, since 2023 with full push support). "How do users find PWAs?" (Google search, social media links, QR codes — same as any website). "Can I charge money?" (Yes, use Stripe/PayPal — no 30% store fee). If time allows, ask students to share their project ideas and apply the decision framework together.
+                </aside>
+            </section>
+
+            <!-- Slide 23: Thank You -->
+            <section class="title-slide">
+                <h1>Thank You!</h1>
+                <p style="font-size: 1em; margin-top: 0.5em;">Progressive Web Apps: A modern alternative to native development.</p>
+                <div style="margin-top: 1em;">
+                    <a href="https://rent-tracker.mirthajimenez.qzz.io/" target="_blank" style="color: white; text-decoration: underline; font-size: 0.8em;">rent-tracker.mirthajimenez.qzz.io</a>
+                </div>
+                <p class="footer-text">Press ESC for slide overview</p>
+                <aside class="notes">
+                    Wrap up by reiterating the core message: PWAs are not a replacement for native or React Native — they are a third option that makes sense for the majority of apps. The students already have the skills (HTML, CSS, JS) to build one today. The live site and GitHub PR are available for them to explore. Encourage them to try adding a manifest and service worker to one of their existing web projects — it takes less than an hour. Thank them for their attention and remind them the speaker notes are available by pressing the S key anytime.
+                </aside>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/notes/notes.min.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            slideNumber: 'c/t',
+            transition: 'slide',
+            transitionSpeed: 'default',
+            backgroundTransition: 'fade',
+            center: true,
+            plugins: [ RevealNotes ]
+            // NOTE: No custom width/height. reveal.js auto-scales to fit any screen (laptop, projector, TV)
+        });
+    </script>
+</body>
+</html>
