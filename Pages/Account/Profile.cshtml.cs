@@ -146,7 +146,7 @@ public class ProfileModel : PageModel
             new ClaimsPrincipal(claimsIdentity),
             authProperties);
 
-        SuccessMessage = "Profile updated successfully.";
-        return Page();
+        TempData["SuccessMessage"] = "Profile updated successfully.";
+        return RedirectToPage();
     }
 }

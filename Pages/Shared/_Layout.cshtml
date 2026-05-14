@@ -4,24 +4,41 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - RentTracker</title>
-    <meta name="theme-color" content="#2563eb" />
+    <meta name="theme-color" content="#2563eb" id="theme-color-meta" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="RentTracker" />
     <link rel="manifest" href="~/manifest.json" />
     <link rel="icon" href="~/icons/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="~/icons/icon-192.png" />
+    <script>
+        (function() {
+            var theme = localStorage.getItem('theme');
+            if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                var meta = document.getElementById('theme-color-meta');
+                if (meta) meta.content = '#1e3a8a';
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
     <div class="app-container">
         <header class="app-header">
             <div class="header-brand">
                 <h1><a href="~/">RentTracker</a></h1>
             </div>
-            <nav class="header-nav">
-                @if (User.Identity?.IsAuthenticated == true)
-                {
+            <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <nav class="header-nav" aria-label="Main navigation">
                     <a asp-page="/Index">Dashboard</a>
                     @if (User.IsInRole(UserRoles.Administrator) || User.IsInRole(UserRoles.Owner))
                     {
@@ -37,21 +54,22 @@
                     {
                         <a asp-page="/Users/Index">Users</a>
                     }
-                }
-            </nav>
-            <div class="header-actions">
-                @if (User.Identity?.IsAuthenticated == true)
-                {
+                </nav>
+                <div class="header-actions">
                     <span class="user-info">@User.Identity.Name (@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value)</span>
                     <a asp-page="/Account/Profile" class="btn btn-sm">Profile</a>
                     <form asp-page="/Account/Logout" method="post" class="logout-form">
                         <button type="submit" class="btn btn-sm">Logout</button>
                     </form>
-                }
-            </div>
+                </div>
+            }
+            <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+                <span class="theme-icon-light">&#9728;</span>
+                <span class="theme-icon-dark">&#9789;</span>
+            </button>
         </header>
 
-        <main class="app-main">
+        <main class="app-main" id="main-content">
             @RenderBody()
         </main>
 
@@ -60,6 +78,7 @@
         </footer>
     </div>
 
+    <partial name="_ToastNotifications" />
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

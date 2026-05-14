@@ -8,15 +8,6 @@
 <partial name="_PageHeader" model='new PageHeaderModel { Title = "My Profile", ActionUrl = "./ChangePassword", ActionText = "Change Password" }' />
 
 <div class="page-content">
-    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
-    {
-        <div class="alert alert-success">@Model.SuccessMessage</div>
-    }
-    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-    {
-        <div class="alert alert-danger">@Model.ErrorMessage</div>
-    }
-
     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
     <form method="post" class="form-horizontal">

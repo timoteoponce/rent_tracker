@@ -9,22 +9,22 @@
 
 <div class="page-content">
     <div class="stats-grid">
-        <div class="stat-card">
+        <a asp-page="/Properties/Index" class="stat-card" aria-label="View all properties">
             <span class="stat-label">Total Properties</span>
             <span class="stat-value">@Model.TotalProperties</span>
-        </div>
-        <div class="stat-card">
+        </a>
+        <a asp-page="/Leases/Index" class="stat-card" aria-label="View active leases">
             <span class="stat-label">Occupied</span>
             <span class="stat-value">@Model.OccupiedProperties</span>
-        </div>
-        <div class="stat-card">
+        </a>
+        <a asp-page="/Properties/Index" class="stat-card" aria-label="View available properties">
             <span class="stat-label">Available</span>
             <span class="stat-value">@Model.AvailableProperties</span>
-        </div>
-        <div class="stat-card">
+        </a>
+        <a asp-page="/Payments/Index" class="stat-card" aria-label="View payments catalogue">
             <span class="stat-label">Total Revenue (This Month)</span>
             <span class="stat-value">Bs. @Model.ThisMonthRevenue.ToString("N0")</span>
-        </div>
+        </a>
     </div>
 
     <div class="form-row">
@@ -60,6 +60,27 @@
 @section Scripts {
     <script src="~/lib/chartjs/chart.umd.js"></script>
     <script>
+        // Dark mode color helper for charts
+        function getChartColors() {
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            return {
+                primary: isDark ? 'rgba(96, 165, 250, 0.8)' : 'rgba(37, 99, 235, 0.8)',
+                primaryBorder: isDark ? 'rgba(96, 165, 250, 1)' : 'rgba(37, 99, 235, 1)',
+                success: isDark ? 'rgba(74, 222, 128, 0.8)' : 'rgba(22, 163, 74, 0.8)',
+                warning: isDark ? 'rgba(251, 191, 36, 0.8)' : 'rgba(245, 158, 11, 0.8)',
+                danger: isDark ? 'rgba(248, 113, 113, 0.8)' : 'rgba(220, 38, 38, 0.8)',
+                gray: isDark ? 'rgba(156, 163, 175, 0.8)' : 'rgba(107, 114, 128, 0.8)',
+                text: isDark ? '#9ca3af' : '#6b7280',
+                grid: isDark ? '#374151' : '#e5e7eb'
+            };
+        }
+
+        var colors = getChartColors();
+
+        // Set global defaults so axes and legends follow the theme
+        Chart.defaults.color = colors.text;
+        Chart.defaults.borderColor = colors.grid;
+
         // Monthly Revenue Chart
         var revenueCtx = document.getElementById('revenueChart').getContext('2d');
         var revenueChart = new Chart(revenueCtx, {
@@ -69,8 +90,8 @@
                 datasets: [{
                     label: 'Revenue (BOB)',
                     data: @Html.Raw(Json.Serialize(Model.MonthlyRevenue)),
-                    backgroundColor: 'rgba(37, 99, 235, 0.8)',
-                    borderColor: 'rgba(37, 99, 235, 1)',
+                    backgroundColor: colors.primary,
+                    borderColor: colors.primaryBorder,
                     borderWidth: 1
                 }]
             },
@@ -99,10 +120,10 @@
                 datasets: [{
                     data: @Html.Raw(Json.Serialize(Model.PaymentStatusCounts)),
                     backgroundColor: [
-                        'rgba(245, 158, 11, 0.8)',  // Pending - yellow
-                        'rgba(22, 163, 74, 0.8)',   // Received - green
-                        'rgba(37, 99, 235, 0.8)',   // Partial - blue
-                        'rgba(220, 38, 38, 0.8)'    // Late - red
+                        colors.warning,  // Pending
+                        colors.success,  // Received
+                        colors.primary,  // Partial
+                        colors.danger    // Late
                     ]
                 }]
             },
@@ -121,9 +142,9 @@
                 datasets: [{
                     data: [@Model.OccupiedProperties, @Model.AvailableProperties, @Model.DisabledProperties],
                     backgroundColor: [
-                        'rgba(22, 163, 74, 0.8)',   // Occupied - green
-                        'rgba(37, 99, 235, 0.8)',   // Available - blue
-                        'rgba(107, 114, 128, 0.8)'  // Disabled - gray
+                        colors.success, // Occupied
+                        colors.primary, // Available
+                        colors.gray     // Disabled
                     ]
                 }]
             },

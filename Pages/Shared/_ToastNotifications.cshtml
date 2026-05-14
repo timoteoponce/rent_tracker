@@ -1,0 +1,32 @@
+@{
+    var successMessage = TempData["SuccessMessage"]?.ToString();
+    var errorMessage = TempData["ErrorMessage"]?.ToString();
+    var warningMessage = TempData["WarningMessage"]?.ToString();
+}
+
+@if (!string.IsNullOrEmpty(successMessage) || !string.IsNullOrEmpty(errorMessage) || !string.IsNullOrEmpty(warningMessage))
+{
+    <div id="toast-container" class="toast-container" aria-live="polite" aria-label="Notifications">
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="toast toast-success" role="status" data-toast>
+                <span>@successMessage</span>
+                <button type="button" class="toast-close" aria-label="Close notification">&times;</button>
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="toast toast-error" role="alert" data-toast>
+                <span>@errorMessage</span>
+                <button type="button" class="toast-close" aria-label="Close notification">&times;</button>
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(warningMessage))
+        {
+            <div class="toast toast-warning" role="alert" data-toast>
+                <span>@warningMessage</span>
+                <button type="button" class="toast-close" aria-label="Close notification">&times;</button>
+            </div>
+        }
+    </div>
+}
