@@ -33,6 +33,8 @@ public class IndexModel : PageModel
             .Include(p => p.Lease)
             .ThenInclude(l => l.Property)
             .Include(p => p.Lease)
+            .ThenInclude(l => l.PropertyUnit)
+            .Include(p => p.Lease)
             .ThenInclude(l => l.Tenant)
             .AsQueryable();
 
