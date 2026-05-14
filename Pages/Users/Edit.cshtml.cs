@@ -35,6 +35,9 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnPostAsync(Guid id)
     {
+        // Remove PasswordHash validation error - it is not submitted from the form
+        ModelState.Remove("User.PasswordHash");
+
         if (!ModelState.IsValid)
         {
             return Page();

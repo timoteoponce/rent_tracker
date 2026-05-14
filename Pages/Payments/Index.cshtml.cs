@@ -23,6 +23,9 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string? StatusFilter { get; set; }
 
+    [TempData]
+    public string? DeleteErrorMessage { get; set; }
+
     public async Task OnGetAsync()
     {
         var userId = AuthorizationHelper.GetCurrentUserId(User);
@@ -62,5 +65,32 @@ public class IndexModel : PageModel
         Payments = paymentsList
             .OrderByDescending(p => p.ForPeriod)
             .ToList();
+    }
+
+    public async Task<IActionResult> OnPostDeleteAsync(Guid id)
+    {
+        var payment = await _context.Payments
+            .Include(p => p.Lease)
+            .ThenInclude(l => l.Property)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
+        if (payment == null)
+        {
+            return NotFound();
+        }
+
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+        var isTenant = User.IsInRole(UserRoles.Tenant);
+
+        if (!AuthorizationHelper.CanViewPayment(payment, userId, isAdmin, isTenant))
+        {
+            return Forbid();
+        }
+
+        _context.Payments.Remove(payment);
+        await _context.SaveChangesAsync();
+
+        return RedirectToPage();
     }
 }

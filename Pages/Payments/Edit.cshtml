@@ -23,11 +23,11 @@
         <div class="form-row">
             <div class="form-group">
                 <label>Property</label>
-                <p class="form-control-static">@Model.OriginalPayment.Lease.Property.Name</p>
+                <p class="form-control-static">@(Model.OriginalPayment.Lease.Property?.Name ?? "Unknown Property")</p>
             </div>
             <div class="form-group">
                 <label>Tenant</label>
-                <p class="form-control-static">@Model.OriginalPayment.Lease.Tenant.FullName</p>
+                <p class="form-control-static">@(Model.OriginalPayment.Lease.Tenant?.FullName ?? "Unknown Tenant")</p>
             </div>
         </div>
         <div class="form-row">

@@ -181,7 +181,7 @@
                         @foreach (var lease in Model.LeaseHistory)
                         {
                             <tr>
-                                <td>@lease.Tenant.FullName</td>
+                                <td>@(lease.Tenant?.FullName ?? "Unknown Tenant")</td>
                                 @if (Model.Property.CanBeLeasedByUnits)
                                 {
                                     <td>@(lease.PropertyUnit?.Name ?? "Whole Property")</td>

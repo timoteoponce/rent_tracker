@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace RentTracker.Web.Models;
 
@@ -40,8 +41,11 @@ public class User
     public DateTimeOffset? LastLoginAt { get; set; }
 
     // Navigation properties
+    [ValidateNever]
     public ICollection<Property> OwnedProperties { get; set; } = new List<Property>();
+    [ValidateNever]
     public ICollection<Property> LastEditedProperties { get; set; } = new List<Property>();
+    [ValidateNever]
     public ICollection<Lease> Leases { get; set; } = new List<Lease>();
 }
 

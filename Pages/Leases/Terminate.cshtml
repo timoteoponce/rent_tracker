@@ -13,8 +13,8 @@
     <div class="alert alert-warning">
         <h4>⚠️ Forcibly Terminate Lease</h4>
         <p>
-            Property: <strong>@Model.Lease.Property.Name</strong><br>
-            Tenant: <strong>@Model.Lease.Tenant.FullName</strong><br>
+            Property: <strong>@(Model.Lease.Property?.Name ?? "Unknown Property")</strong><br>
+            Tenant: <strong>@(Model.Lease.Tenant?.FullName ?? "Unknown Tenant")</strong><br>
             Current Status: <strong>@Model.Lease.Status</strong>
         </p>
     </div>

@@ -89,8 +89,8 @@
                     @foreach (var lease in Model.ActiveLeasesList)
                     {
                         <tr>
-                            <td>@lease.Property.Name</td>
-                            <td>@lease.Tenant.FullName</td>
+                            <td>@(lease.Property?.Name ?? "Unknown Property")</td>
+                            <td>@(lease.Tenant?.FullName ?? "Unknown Tenant")</td>
                             <td>@lease.StartDate.ToString("dd MMM yyyy")</td>
                             <td>@lease.AgreedPrice.ToString("C") BOB</td>
                             <td>

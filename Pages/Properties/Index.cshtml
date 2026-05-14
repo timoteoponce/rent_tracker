@@ -8,6 +8,11 @@
 <partial name="_PageHeader" model='new PageHeaderModel { Title = "Properties", ActionUrl = "./Create", ActionText = "Add Property" }' />
 
 <div class="page-content">
+    @if (!string.IsNullOrEmpty(Model.DeleteErrorMessage))
+    {
+        <div class="alert alert-danger">@Model.DeleteErrorMessage</div>
+    }
+
     @if (Model.Properties.Any())
     {
         <div class="table-container">
@@ -61,6 +66,12 @@
                             <td>
                                 <a asp-page="./Details" asp-route-id="@property.Id" class="btn btn-sm btn-secondary">View</a>
                                 <a asp-page="./Edit" asp-route-id="@property.Id" class="btn btn-sm btn-secondary">Edit</a>
+                                <form method="post" asp-page-handler="Delete" class="d-inline">
+                                    <input type="hidden" name="id" value="@property.Id" />
+                                    <button type="submit" class="btn btn-sm btn-danger" data-confirm="Are you sure you want to delete property '@property.Name'? This will also delete all units and price history.">
+                                        Delete
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                     }

@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+
 namespace RentTracker.Web.Models;
 
 /// <summary>
@@ -19,5 +21,6 @@ public class PropertyPriceHistory
     public Guid PropertyId { get; set; }
 
     // Navigation properties
+    [ValidateNever]
     public Property Property { get; set; } = null!;
 }
