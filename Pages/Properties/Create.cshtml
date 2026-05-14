@@ -22,8 +22,11 @@
 
             <div class="form-group">
                 <label asp-for="Property.Location"></label>
-                <input asp-for="Property.Location" class="form-control" placeholder="Paste Google Maps link" />
+                <input asp-for="Property.Location" class="form-control" placeholder="Paste Google Maps link" id="propertyLocation" />
                 <span asp-validation-for="Property.Location" class="text-danger"></span>
+                <small>
+                    <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" class="text-info">Open Google Maps</a>
+                </small>
             </div>
         </div>
 

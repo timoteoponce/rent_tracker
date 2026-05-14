@@ -104,9 +104,10 @@ public class CreateModel : PageModel
         var isAdmin = User.IsInRole(UserRoles.Administrator);
         var isTenant = User.IsInRole(UserRoles.Tenant);
 
-        // Get active leases with property and tenant info, filtered by visibility
+        // Get active leases with property, unit and tenant info, filtered by visibility
         var leases = await _context.Leases
             .Include(l => l.Property)
+            .Include(l => l.PropertyUnit)
             .Include(l => l.Tenant)
             .Where(l => l.Status == LeaseStatus.Active)
             .VisibleToUser(userId, isAdmin, isTenant)
@@ -115,7 +116,7 @@ public class CreateModel : PageModel
         var leaseList = leases.Select(l => new
         {
             Id = l.Id,
-            DisplayText = $"{l.Property.Name} - {l.Tenant.FullName} (Bs. {l.AgreedPrice:N2})"
+            DisplayText = $"{l.Property.Name} - {(l.PropertyUnit != null ? l.PropertyUnit.Name : "Whole Property")} - {l.Tenant.FullName} (Bs. {l.AgreedPrice:N2})"
         }).ToList();
 
         ActiveLeases = new SelectList(leaseList, "Id", "DisplayText");
