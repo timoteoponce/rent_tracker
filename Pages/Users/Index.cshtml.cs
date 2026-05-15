@@ -24,14 +24,11 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        // Fetch users and sort in memory (SQLite DateTimeOffset workaround)
-        var usersList = await _context.Users
+        Users = await _context.Users
             .AsNoTracking()
-            .ToListAsync();
-        Users = usersList
             .OrderBy(u => u.Role)
             .ThenBy(u => u.FullName)
-            .ToList();
+            .ToListAsync();
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(Guid id)

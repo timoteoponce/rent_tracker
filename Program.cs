@@ -49,9 +49,9 @@ public class Program
 
         builder.Services.AddRazorPages();
 
-        // Register SQL-agnostic query service (SQLite implementation)
-        // Replace with PostgresQueryService if switching providers
-        builder.Services.AddScoped<Data.Queries.ISqlQueryService, Data.Queries.SqliteQueryService>();
+        // Dapper is used for read queries where EF Core's SQLite LINQ translation is limited.
+        // Dapper queries use _context.Database.GetDbConnection() from the existing DbContext.
+        // EF Core is kept for writes (change tracking for complex updates like Property Edit).
 
         var app = builder.Build();
 

@@ -28,16 +28,11 @@ public class IndexModel : PageModel
         var userId = AuthorizationHelper.GetCurrentUserId(User);
         var isAdmin = User.IsInRole(UserRoles.Administrator);
 
-        var query = _context.Properties
+        Properties = await _context.Properties
             .AsNoTracking()
             .VisibleToUser(userId, isAdmin)
-            .AsQueryable();
-
-        // Fetch first, then sort in memory (SQLite doesn't support some orderings)
-        var propertiesList = await query.ToListAsync();
-        Properties = propertiesList
             .OrderBy(p => p.Name)
-            .ToList();
+            .ToListAsync();
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(Guid id)

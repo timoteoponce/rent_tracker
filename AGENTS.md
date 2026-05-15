@@ -189,24 +189,52 @@ builder.Services.AddAuthentication(...).AddCookie(...);
 
 ### Database Patterns
 
+We use a **split approach**: EF Core for writes and simple reads, raw SQL (`SqlQueryRaw`) for complex reads.
+
+**Good: EF Core for writes (change tracking helps here)**
 ```csharp
-// Good: Direct EF Core usage
 public async Task<IActionResult> OnPostAsync()
 {
     _context.Properties.Add(Property);
     await _context.SaveChangesAsync();
     return RedirectToPage("./Index");
 }
-
-// Good: Include related data when needed
-var property = await _context.Properties
-    .Include(p => p.Leases)
-    .ThenInclude(l => l.Tenant)
-    .FirstOrDefaultAsync(p => p.Id == id);
-
-// Bad: Repository pattern (unnecessary complexity)
-// Bad: Unit of Work (EF Core already handles this)
 ```
+
+**Good: EF Core for simple reads (no DateTimeOffset issues)**
+```csharp
+var properties = await _context.Properties
+    .AsNoTracking()
+    .OrderBy(p => p.Name)  // ordering by string, NOT DateTimeOffset
+    .ToListAsync();
+```
+
+**Good: SqlQueryRaw for complex reads (avoids SQLite LINQ limits)**
+```csharp
+var sql = @"SELECT py.Id, py.Amount, p.Name AS PropertyName
+            FROM Payments py
+            INNER JOIN Leases l ON py.LeaseId = l.Id
+            INNER JOIN Properties p ON l.PropertyId = p.Id
+            WHERE {visibilityWhere}
+            ORDER BY datetime(py.CreatedAt) DESC
+            LIMIT {0}";
+
+return await _context.Database
+    .SqlQueryRaw<RecentPaymentDto>(sql, count.ToString())
+    .ToListAsync();
+```
+
+**Good: EF Core Include chains for paginated lists with navigation properties**
+```csharp
+// Navigation properties accessed in views (lease.Property?.Name).
+// Fetch client-side first when ordering by DateTimeOffset:
+var list = await query.ToListAsync();
+var sorted = list.OrderByDescending(l => l.StartDate).ToList();
+```
+
+**Avoid: ISqlQueryService abstraction** — We removed it. Direct `SqlQueryRaw` is simpler for SQLite.
+
+**Avoid: Dapper** — Installed via NuGet but not used. The `SqlQueryRaw` approach works with both file-based and in-memory SQLite (tests). Dapper has issues with in-memory SQLite in integration tests.
 
 ### CSS Guidelines
 
@@ -375,47 +403,44 @@ libman restore
 
 ### "SQLite does not support DateTimeOffset in ORDER BY" error
 SQLite doesn't support ordering by DateTimeOffset columns directly. 
-**Solution:** Fetch data with `.ToList()` first, then use LINQ to Objects for ordering:
+**Solution (Option A — for small lists):** Fetch data with `.ToList()` first, then use LINQ to Objects:
 ```csharp
-// BAD - will throw exception:
-var data = await _context.Payments.OrderBy(p => p.CreatedAt).ToListAsync();
-
-// GOOD - fetch then sort in memory:
 var data = await _context.Payments.Take(100).ToListAsync();
 var sorted = data.OrderBy(p => p.CreatedAt).ToList();
 ```
 
+**Solution (Option B — for reports/dashboard):** Use SqlQueryRaw with SQLite's `datetime()` function:
+```csharp
+var sql = @"SELECT ... FROM Payments ... ORDER BY datetime(py.CreatedAt) DESC LIMIT {0}";
+return await _context.Database.SqlQueryRaw<Dto>(sql, count).ToListAsync();
+```
+
 ### "SQLite does not support DateTimeOffset.Year/Month in WHERE" error
 SQLite doesn't support accessing `.Year`, `.Month`, `.Day` properties on DateTimeOffset in LINQ WHERE clauses.
-**Solution:** Filter client-side after fetching data:
+**Solution (Option A — for small lists):** Filter client-side:
 ```csharp
-// BAD - will throw exception:
-var payments = await _context.Payments
-    .Where(p => p.ForPeriod.Year == 2024 && p.ForPeriod.Month == 6)
-    .ToListAsync();
-
-// GOOD - filter in memory:
 var allPayments = await _context.Payments.ToListAsync();
-var payments = allPayments
-    .Where(p => p.ForPeriod.Year == 2024 && p.ForPeriod.Month == 6)
-    .ToList();
+var payments = allPayments.Where(p => p.ForPeriod.Year == 2024).ToList();
+```
+
+**Solution (Option B — for precise queries):** Use SqlQueryRaw with `strftime`:
+```csharp
+var sql = @"SELECT * FROM Payments
+            WHERE strftime('%Y', ForPeriod) = @Year AND strftime('%m', ForPeriod) = @Month";
 ```
 
 ### "The LINQ expression could not be translated. DateTimeOffset comparison" error
-SQLite doesn't support comparing DateTimeOffset values directly in WHERE clauses (e.g., `>=`, `<=`, `==`).
-**Solution:** Use `.AsEnumerable()` to force client-side evaluation before filtering:
+SQLite doesn't support comparing DateTimeOffset values in LINQ WHERE clauses.
+**Solution (Option A):** Fetch then filter in memory:
 ```csharp
-// BAD - will throw exception:
-var payments = await _context.Payments
-    .Where(p => p.ForPeriod >= startDate && p.ForPeriod <= endDate)
-    .ToListAsync();
+var payments = await _context.Payments.Include(p => p.Lease).ToListAsync();
+var result = payments.Where(p => p.ForPeriod >= startDate).ToList();
+```
 
-// GOOD - fetch then filter in memory:
-var payments = _context.Payments
-    .Include(p => p.Lease)
-    .AsEnumerable()  // Switch to client-side before DateTimeOffset comparison
-    .Where(p => p.ForPeriod >= startDate && p.ForPeriod <= endDate)
-    .ToList();
+**Solution (Option B — for reports):** Use SqlQueryRaw with ISO-8601 string comparison:
+```csharp
+var sql = @"SELECT ... FROM Payments WHERE ForPeriod >= {0} AND ForPeriod <= {1}";
+return await _context.Database.SqlQueryRaw<Dto>(sql, startDate.ToString("O"), endDate.ToString("O")).ToListAsync();
 ```
 
 ## Important Decisions Log
@@ -431,6 +456,7 @@ var payments = _context.Payments
 | 2026-04-13 | Skip tests for now | Single developer, can add later if needed |
 | 2026-04-13 | Vanilla CSS vs Bootstrap | No dependency, CSS is now capable enough |
 | 2026-04-13 | VS Code as primary dev environment | Simple, cross-platform, good .NET support |
+| 2026-05-15 | Removed ISqlQueryService abstraction | Added Dapper (unused); SqlQueryRaw via EF Core is simpler for both file and in-memory SQLite |
 
 ## Resources
 
@@ -457,20 +483,27 @@ dotnet test RentTracker.Tests/RentTracker.Tests.csproj
 
 The test project is excluded from the main compilation via `<Compile Remove="RentTracker.Tests\**\*.cs" />` in `RentTracker.csproj`.
 
-## SQL-Agnostic Query Layer
+## Query Patterns (Raw SQL + EF Core)
 
-For performance-critical aggregations that SQLite cannot translate efficiently (DateTimeOffset ordering, grouping, date-range filtering), the app uses `ISqlQueryService` in `Data/Queries/`.
+For performance-critical aggregations that SQLite LINQ cannot translate (DateTimeOffset ordering, grouping, date-range filtering), the app uses `Database.SqlQueryRaw<T>` directly in PageModels.
 
-**Current implementation:** `SqliteQueryService` (uses `Database.SqlQueryRaw<T>` with SQLite `strftime` functions)
-**To switch providers:** Implement a new class (e.g., `PostgresQueryService`) and change the registration in `Program.cs`:
-```csharp
-builder.Services.AddScoped<Data.Queries.ISqlQueryService, Data.Queries.PostgresQueryService>();
-```
+**Pattern: EF Core for writes + SqlQueryRaw for hard reads.**
+- **Writes:** EF Core change tracking (Create, Edit, Delete handlers)
+- **Simple reads:** EF Core LINQ (counts, string-order lists, navigations via `Include`)
+- **Complex reads:** `SqlQueryRaw<T>` for DateTimeOffset sorting, date-range filtering, aggregations
 
-**PageModels that use the service:**
+**When to use SqlQueryRaw instead of LINQ:**
+- Ordering by DateTimeOffset (`ORDER BY datetime(col) DESC`)
+- Filtering by DateTimeOffset year/month (`strftime('%Y', col) = @Year`)
+- Grouping by DateTimeOffset periods (`GROUP BY strftime('%m', col)`)
+- Reports/dashboard queries that need SQLite-specific functions
+
+**Dapper is available** (NuGet package installed) but not currently used. It was evaluated but `SqlQueryRaw` works better with both file-based and in-memory SQLite (integration tests). If you need Dapper for a future feature, ensure the `IDbConnection` uses the same `SqliteConnection` as the DbContext (in tests, they share the in-memory connection).
+
+**PageModels that use SqlQueryRaw:**
 - `Pages/Reports/Index.cshtml.cs` — Monthly revenue, status counts, occupancy stats
 - `Pages/Reports/Detailed.cshtml.cs` — Date-range filtered payment reports
-- `Pages/Index.cshtml.cs` — Recent payments (top 10 by `CreatedAt`)
+- `Pages/Index.cshtml.cs` — Recent payments (top 10 by `CreatedAt`), active leases list
 
 ## UI Normalization Patterns
 
@@ -536,7 +569,8 @@ This means: **if the form includes a new field, it is automatically persisted**.
 - ❌ Cannot use `.OrderBy(p => p.DateProperty)` on DateTimeOffset
 - ❌ Cannot use `.Where(p => p.Date.Year == 2024)` on DateTimeOffset
 - ❌ Cannot use `.Where(p => p.Date.Month == 6)` on DateTimeOffset
-- ✅ Solution: Fetch with `.ToListAsync()` first, then use LINQ to Objects
+- ✅ Best solution: Use `SqlQueryRaw` with `datetime()` / `strftime()` functions
+- ✅ Fallback: Fetch with `.ToListAsync()` first, then use LINQ to Objects
 
 ---
 
