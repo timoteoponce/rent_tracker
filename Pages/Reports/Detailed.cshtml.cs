@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
-using RentTracker.Web.Data.Queries;
 using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
 
@@ -14,12 +13,10 @@ namespace RentTracker.Web.Pages.Reports;
 public class DetailedModel : PageModel
 {
     private readonly RentTrackerDbContext _context;
-    private readonly ISqlQueryService _sqlQueries;
 
-    public DetailedModel(RentTrackerDbContext context, ISqlQueryService sqlQueries)
+    public DetailedModel(RentTrackerDbContext context)
     {
         _context = context;
-        _sqlQueries = sqlQueries;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -33,18 +30,15 @@ public class DetailedModel : PageModel
 
     public SelectList Properties { get; set; } = new(Enumerable.Empty<object>());
 
-    // Summary Stats
     public decimal TotalRevenue { get; set; }
     public int TotalPayments { get; set; }
     public decimal AveragePayment { get; set; }
 
-    // Breakdown Data
     public List<PropertyBreakdownItem> PropertyBreakdown { get; set; } = new();
     public List<MonthlyBreakdownItem> MonthlyBreakdown { get; set; } = new();
 
     public async Task OnGetAsync()
     {
-        // Set default date range (last 12 months)
         if (!StartDate.HasValue)
         {
             StartDate = DateTimeOffset.UtcNow.AddMonths(-12);
@@ -54,7 +48,6 @@ public class DetailedModel : PageModel
             EndDate = DateTimeOffset.UtcNow;
         }
 
-        // Load properties dropdown
         var properties = await _context.Properties
             .AsNoTracking()
             .Where(p => p.IsEnabled)
@@ -66,21 +59,51 @@ public class DetailedModel : PageModel
         var isAdmin = User.IsInRole(UserRoles.Administrator);
         var isTenant = User.IsInRole(UserRoles.Tenant);
 
-        // Fetch payment details via SQL (avoids loading entire Payments table into memory)
-        var payments = await _sqlQueries.GetPaymentsInDateRangeAsync(
-            StartDate.Value,
-            EndDate.Value,
-            PropertyId,
-            userId,
-            isAdmin,
-            isTenant);
+        var visibilityWhere = BuildVisibilityWhere(userId, isAdmin, isTenant);
 
-        // Calculate summary stats
+        var propertyFilter = PropertyId.HasValue
+            ? "AND l.PropertyId = '{1}'"
+            : "";
+
+        var sql = $@"
+            SELECT
+                py.Id,
+                py.Amount,
+                py.Status,
+                py.ForPeriod,
+                py.CreatedAt,
+                p.Id AS PropertyId,
+                p.Name AS PropertyName,
+                p.IsPrivate,
+                p.LastEditedById,
+                l.TenantId AS LeaseTenantId
+            FROM Payments py
+            INNER JOIN Leases l ON py.LeaseId = l.Id
+            INNER JOIN Properties p ON l.PropertyId = p.Id
+            WHERE py.ForPeriod >= {{0}} AND py.ForPeriod <= {{1}}
+                {propertyFilter}
+                AND {visibilityWhere}
+            ORDER BY py.ForPeriod DESC";
+
+        var parameters = new List<object>
+        {
+            StartDate.Value.ToString("O"),
+            EndDate.Value.ToString("O")
+        };
+
+        if (PropertyId.HasValue)
+        {
+            parameters.Add(PropertyId.Value.ToString());
+        }
+
+        var payments = await _context.Database
+            .SqlQueryRaw<PaymentDetailDto>(sql, parameters.ToArray())
+            .ToListAsync();
+
         TotalPayments = payments.Count;
         TotalRevenue = payments.Sum(p => p.Amount);
         AveragePayment = TotalPayments > 0 ? TotalRevenue / TotalPayments : 0;
 
-        // Property breakdown
         PropertyBreakdown = payments
             .GroupBy(p => p.PropertyName)
             .Select(g => new PropertyBreakdownItem
@@ -93,7 +116,6 @@ public class DetailedModel : PageModel
             .OrderByDescending(x => x.TotalAmount)
             .ToList();
 
-        // Monthly breakdown
         MonthlyBreakdown = payments
             .GroupBy(p => new { p.ForPeriod.Year, p.ForPeriod.Month })
             .Select(g => new MonthlyBreakdownItem
@@ -107,6 +129,23 @@ public class DetailedModel : PageModel
             })
             .OrderBy(x => x.Month)
             .ToList();
+    }
+
+    private static string BuildVisibilityWhere(Guid? userId, bool isAdmin, bool isTenant)
+    {
+        if (isAdmin || !userId.HasValue)
+        {
+            return "1 = 1";
+        }
+
+        var userIdStr = userId.Value.ToString();
+
+        if (isTenant)
+        {
+            return $"l.TenantId = '{userIdStr}'";
+        }
+
+        return $"(p.IsPrivate = 0 OR p.LastEditedById = '{userIdStr}')";
     }
 
     public class PropertyBreakdownItem

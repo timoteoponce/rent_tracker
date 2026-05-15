@@ -1,26 +1,17 @@
-namespace RentTracker.Web.Data.Queries.Dtos;
+namespace RentTracker.Web.Data;
 
-/// <summary>
-/// Monthly revenue aggregate for chart/reporting.
-/// </summary>
 public class MonthlyRevenueDto
 {
     public int Month { get; set; }
     public decimal TotalRevenue { get; set; }
 }
 
-/// <summary>
-/// Payment status count aggregate for chart/reporting.
-/// </summary>
 public class PaymentStatusCountDto
 {
     public string Status { get; set; } = string.Empty;
     public int Count { get; set; }
 }
 
-/// <summary>
-/// Property occupancy statistics for reporting.
-/// </summary>
 public class PropertyOccupancyDto
 {
     public int TotalProperties { get; set; }
@@ -29,9 +20,6 @@ public class PropertyOccupancyDto
     public int DisabledProperties { get; set; }
 }
 
-/// <summary>
-/// Payment detail for the detailed report (raw SQL projection to avoid over-fetching).
-/// </summary>
 public class PaymentDetailDto
 {
     public Guid Id { get; set; }
@@ -46,9 +34,6 @@ public class PaymentDetailDto
     public Guid LeaseTenantId { get; set; }
 }
 
-/// <summary>
-/// Recent payment for the dashboard (raw SQL projection to avoid over-fetching).
-/// </summary>
 public class RecentPaymentDto
 {
     public Guid Id { get; set; }
