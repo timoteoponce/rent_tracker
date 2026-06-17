@@ -252,7 +252,7 @@
 <style>
     .collapsible-section {
         margin-bottom: 2rem;
-        border: 1px solid var(--border-color, #e5e7eb);
+        border: 1px solid var(--border-color);
         border-radius: 0.5rem;
         overflow: hidden;
     }
@@ -260,7 +260,7 @@
     .collapsible-toggle {
         width: 100%;
         padding: 1rem;
-        background: var(--bg-secondary, #f3f4f6);
+        background: var(--bg-secondary);
         border: none;
         text-align: left;
         cursor: pointer;
@@ -269,50 +269,59 @@
         gap: 0.5rem;
         font-size: 1rem;
         font-weight: 600;
+        color: var(--text-primary);
     }
 
     .collapsible-toggle:hover {
-        background: var(--bg-hover, #e5e7eb);
+        background: var(--bg-hover);
     }
 
     .toggle-icon {
         font-size: 1.25rem;
         font-weight: bold;
         width: 1.5rem;
+        color: var(--primary-color);
     }
 
     .collapsible-content {
         padding: 1rem;
-        background: var(--bg-primary, #fff);
+        background: var(--bg-primary);
+        border-top: 1px solid var(--border-color);
     }
 
     .setup-guide {
-        font-size: 0.95rem;
-        line-height: 1.6;
+        font-size: 0.9rem;
+        line-height: 1.5;
     }
 
-    .setup-guide h4 {
-        margin-top: 1.5rem;
-        margin-bottom: 0.75rem;
-        color: var(--text-primary, #1f2937);
-    }
-
-    .setup-guide h4:first-child {
+    .setup-guide > * {
         margin-top: 0;
     }
 
+    .setup-guide h4 {
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+    }
+
     .setup-guide ol, .setup-guide ul {
-        padding-left: 1.5rem;
+        padding-left: 1.25rem;
+        margin: 0 0 0.75rem 0;
     }
 
     .setup-guide li {
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .setup-guide p {
+        margin-bottom: 0.75rem;
     }
 
     .form-section {
         margin-bottom: 2rem;
         padding-bottom: 1.5rem;
-        border-bottom: 1px solid var(--border-color, #e5e7eb);
+        border-bottom: 1px solid var(--border-color);
     }
 
     .form-section:last-of-type {
@@ -322,7 +331,7 @@
     .form-section h3 {
         margin-bottom: 1rem;
         font-size: 1.1rem;
-        color: var(--text-primary, #1f2937);
+        color: var(--text-primary);
     }
 
     .form-group {
@@ -344,13 +353,13 @@
         display: block;
         margin-top: 0.25rem;
         font-size: 0.85rem;
-        color: var(--text-secondary, #6b7280);
+        color: var(--text-secondary);
     }
 
     .form-actions {
         margin-top: 1.5rem;
         padding-top: 1rem;
-        border-top: 1px solid var(--border-color, #e5e7eb);
+        border-top: 1px solid var(--border-color);
     }
 
     .input-group {
