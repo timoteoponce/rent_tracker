@@ -45,6 +45,11 @@ public class ProfileModel : PageModel
         [StringLength(100)]
         [Display(Name = "Full Name")]
         public string FullName { get; set; } = string.Empty;
+
+        [StringLength(20)]
+        [Phone]
+        [Display(Name = "Phone Number")]
+        public string? PhoneNumber { get; set; }
     }
 
     public async Task<IActionResult> OnGetAsync()
@@ -66,7 +71,8 @@ public class ProfileModel : PageModel
         {
             Username = user.Username,
             Email = user.Email,
-            FullName = user.FullName
+            FullName = user.FullName,
+            PhoneNumber = user.PhoneNumber
         };
 
         return Page();
@@ -124,6 +130,7 @@ public class ProfileModel : PageModel
         user.Username = Input.Username;
         user.Email = Input.Email;
         user.FullName = Input.FullName;
+        user.PhoneNumber = string.IsNullOrWhiteSpace(Input.PhoneNumber) ? null : Input.PhoneNumber;
 
         await _context.SaveChangesAsync();
 

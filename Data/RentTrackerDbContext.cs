@@ -20,6 +20,8 @@ public class RentTrackerDbContext : DbContext
     public DbSet<Lease> Leases => Set<Lease>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<PropertyPriceHistory> PropertyPriceHistory => Set<PropertyPriceHistory>();
+    public DbSet<WhatsAppSettings> WhatsAppSettings => Set<WhatsAppSettings>();
+    public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -34,6 +36,7 @@ public class RentTrackerDbContext : DbContext
             entity.Property(u => u.Email).HasMaxLength(200);
             entity.Property(u => u.FullName).HasMaxLength(100);
             entity.Property(u => u.Role).HasMaxLength(100);
+            entity.Property(u => u.PhoneNumber).HasMaxLength(20);
         });
 
         // Property configuration
@@ -76,6 +79,7 @@ public class RentTrackerDbContext : DbContext
             entity.Property(l => l.AgreedPrice).HasPrecision(18, 2);
             entity.Property(l => l.AgreedWarranty).HasPrecision(18, 2);
             entity.Property(l => l.TerminationReason).HasMaxLength(500);
+            entity.Property(l => l.PaymentDueDay).HasDefaultValue(1);
             
             entity.HasOne(l => l.Property)
                 .WithMany(p => p.Leases)
@@ -117,6 +121,37 @@ public class RentTrackerDbContext : DbContext
                 .WithMany(p => p.PriceHistory)
                 .HasForeignKey(h => h.PropertyId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // WhatsAppSettings configuration
+        modelBuilder.Entity<WhatsAppSettings>(entity =>
+        {
+            entity.Property(s => s.Provider).HasMaxLength(50);
+            entity.Property(s => s.AccessToken).HasMaxLength(500);
+            entity.Property(s => s.PhoneNumberId).HasMaxLength(100);
+            entity.Property(s => s.BusinessAccountId).HasMaxLength(100);
+            entity.Property(s => s.VerifyToken).HasMaxLength(200);
+        });
+
+        // NotificationLog configuration
+        modelBuilder.Entity<NotificationLog>(entity =>
+        {
+            entity.Property(n => n.Type).HasMaxLength(50);
+            entity.Property(n => n.RecipientRole).HasMaxLength(50);
+            entity.Property(n => n.RecipientPhoneNumber).HasMaxLength(20);
+            entity.Property(n => n.MessageContent).HasMaxLength(1000);
+            entity.Property(n => n.Status).HasMaxLength(20);
+            entity.Property(n => n.ErrorMessage).HasMaxLength(500);
+
+            entity.HasOne(n => n.Lease)
+                .WithMany()
+                .HasForeignKey(n => n.LeaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(n => n.RecipientUser)
+                .WithMany()
+                .HasForeignKey(n => n.RecipientUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

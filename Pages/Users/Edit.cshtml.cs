@@ -84,7 +84,8 @@ public class EditModel : PageModel
             u => u.Username,
             u => u.Email,
             u => u.FullName,
-            u => u.Role))
+            u => u.Role,
+            u => u.PhoneNumber))
         {
             User = userToUpdate;
             return Page();

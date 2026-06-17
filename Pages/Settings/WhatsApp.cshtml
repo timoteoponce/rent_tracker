@@ -1,0 +1,382 @@
+@page
+@model RentTracker.Web.Pages.Settings.WhatsAppModel
+@{
+    ViewData["Title"] = "WhatsApp Configuration";
+}
+
+<div class="page-header">
+    <h2>WhatsApp Configuration</h2>
+</div>
+
+<div class="page-content">
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="alert alert-success">@Model.SuccessMessage</div>
+    }
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger">@Model.ErrorMessage</div>
+    }
+
+    <div class="collapsible-section">
+        <button type="button" class="collapsible-toggle" onclick="toggleSection(this)">
+            <span class="toggle-icon">+</span>
+            <span>WhatsApp Business App Setup Guide (Dedicated SIM Card)</span>
+        </button>
+        <div class="collapsible-content" style="display: none;">
+            <div class="setup-guide">
+                <p>Follow these steps to set up a dedicated SIM card for sending WhatsApp notifications through the Meta WhatsApp Business API.</p>
+
+                <h4>Prerequisites</h4>
+                <ul>
+                    <li>A dedicated SIM card (additional line or second phone)</li>
+                    <li>Meta Business account (business.facebook.com)</li>
+                    <li>The phone with the dedicated SIM must have WhatsApp Business App installed</li>
+                </ul>
+
+                <h4>Step 1: Create Meta Business Account</h4>
+                <ol>
+                    <li>Go to <a href="https://business.facebook.com" target="_blank">business.facebook.com</a></li>
+                    <li>Click "Create Account" and follow the instructions</li>
+                    <li>Complete the business verification</li>
+                </ol>
+
+                <h4>Step 2: Create WhatsApp Business App (WABA)</h4>
+                <ol>
+                    <li>In Meta Business Suite, go to "All Tools" > "WhatsApp" > "WhatsApp Business App"</li>
+                    <li>Click "Create WhatsApp Business App"</li>
+                    <li>Select your business account and enter an app name</li>
+                </ol>
+
+                <h4>Step 3: Add Dedicated Phone Number</h4>
+                <ol>
+                    <li>In the WABA dashboard, go to "Phone Numbers" section</li>
+                    <li>Click "Add Phone Number"</li>
+                    <li>Enter the dedicated SIM phone number (with country code, e.g., +5917XXXXXXX)</li>
+                    <li>Choose "Use this phone number with WhatsApp Business App" option</li>
+                    <li>Click "Next" to proceed to verification</li>
+                </ol>
+
+                <h4>Step 4: Verify Phone Number on Device</h4>
+                <ol>
+                    <li>Install WhatsApp Business App on the phone with the dedicated SIM</li>
+                    <li>Open WhatsApp Business App and verify the phone number when prompted</li>
+                    <li>Complete the OTP verification process</li>
+                    <li>Note: This phone will only send outbound messages - it receives nothing in Phase 1</li>
+                </ol>
+
+                <h4>Step 5: Generate Permanent Access Token</h4>
+                <ol>
+                    <li>In Meta Business Suite, go to "Settings" > "WhatsApp" > "API Settings"</li>
+                    <li>Under "Access Tokens", click "Generate permanent access token"</li>
+                    <li>Select the WABA and grant the required permissions (whatsapp_business_management, whatsapp_business_messaging)</li>
+                    <li>Copy the generated token - this is your "Access Token"</li>
+                </ol>
+
+                <h4>Step 6: Get Your Credentials</h4>
+                <ol>
+                    <li>From the WhatsApp API Settings page, copy:
+                        <ul>
+                            <li><strong>Phone Number ID</strong> - found next to your verified phone number</li>
+                            <li><strong>Business Account ID</strong> - shown at the top of the API Settings page</li>
+                        </ul>
+                    </li>
+                    <li>Paste these values into the configuration form below</li>
+                </ol>
+
+                <h4>Important Notes</h4>
+                <ul>
+                    <li>The dedicated SIM operates in one-way mode: it sends notifications but cannot receive messages in Phase 1</li>
+                    <li>Keep your Access Token secure and never share it</li>
+                    <li>The Access Token is encrypted before storage</li>
+                    <li>You can use the same phone number for both WABA and the WhatsApp Business App on the device</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" class="form-horizontal">
+        <div class="form-section">
+            <h3>General Settings</h3>
+
+            <div class="form-group">
+                <div class="form-check">
+                    <input asp-for="Input.IsEnabled" class="form-check-input" />
+                    <label asp-for="Input.IsEnabled" class="form-check-label">
+                        <strong>Enable WhatsApp Notifications</strong>
+                    </label>
+                </div>
+                <span class="field-hint">When disabled, no WhatsApp notifications will be sent</span>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>API Credentials</h3>
+
+            <div class="form-group">
+                <label asp-for="Input.AccessToken"></label>
+                <input asp-for="Input.AccessToken" class="form-control" type="password" autocomplete="new-password" />
+                <span class="field-hint">Enter a new value to update. Leave unchanged to keep current value. Format: E.164 (e.g., +5917XXXXXXX)</span>
+                <span asp-validation-for="Input.AccessToken" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Input.PhoneNumberId"></label>
+                <input asp-for="Input.PhoneNumberId" class="form-control" />
+                <span class="field-hint">Found in Meta Business Suite > WhatsApp > API Settings > Phone Numbers</span>
+                <span asp-validation-for="Input.PhoneNumberId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Input.BusinessAccountId"></label>
+                <input asp-for="Input.BusinessAccountId" class="form-control" />
+                <span class="field-hint">Found in Meta Business Suite > WhatsApp > API Settings (top of page)</span>
+                <span asp-validation-for="Input.BusinessAccountId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Input.VerifyToken"></label>
+                <input asp-for="Input.VerifyToken" class="form-control" />
+                <span class="field-hint">Used for webhook verification. Generate a random string for security.</span>
+                <span asp-validation-for="Input.VerifyToken" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Test Connection</h3>
+
+            <div class="form-group">
+                <label asp-for="Input.TestPhoneNumber">Test Phone Number</label>
+                <div class="input-group">
+                    <input asp-for="Input.TestPhoneNumber" class="form-control" placeholder="+5917XXXXXXX" />
+                    <button type="submit" name="handler" value="TestConnection" class="btn btn-secondary">Send Test Message</button>
+                </div>
+                <span class="field-hint">Enter a phone number to receive the test message (include country code)</span>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.TestResult))
+            {
+                <div class="alert @(Model.TestSuccess ? "alert-success" : "alert-danger")">
+                    @Model.TestResult
+                </div>
+            }
+        </div>
+
+        <div class="form-section">
+            <h3>Notification Types</h3>
+
+            <div class="form-group">
+                <div class="form-check">
+                    <input asp-for="Input.EnablePaymentDueSoon" class="form-check-input" />
+                    <label asp-for="Input.EnablePaymentDueSoon" class="form-check-label">Payment Due Soon</label>
+                </div>
+                <span class="field-hint">Sent X days before the payment due date to tenants</span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Input.DueSoonDaysBefore">Days Before Due Date</label>
+                <input asp-for="Input.DueSoonDaysBefore" class="form-control" type="number" min="1" max="30" />
+                <span asp-validation-for="Input.DueSoonDaysBefore" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <div class="form-check">
+                    <input asp-for="Input.EnablePaymentToday" class="form-check-input" />
+                    <label asp-for="Input.EnablePaymentToday" class="form-check-label">Payment Due Today</label>
+                </div>
+                <span class="field-hint">Sent on the payment due date to tenants</span>
+            </div>
+
+            <div class="form-group">
+                <div class="form-check">
+                    <input asp-for="Input.EnablePaymentOverdue" class="form-check-input" />
+                    <label asp-for="Input.EnablePaymentOverdue" class="form-check-label">Payment Overdue</label>
+                </div>
+                <span class="field-hint">Sent daily after the payment due date</span>
+            </div>
+
+            <div class="form-group">
+                <div class="form-check">
+                    <input asp-for="Input.EnableOverdueToTenant" class="form-check-input" />
+                    <label asp-for="Input.EnableOverdueToTenant" class="form-check-label">Send Overdue Notifications to Tenants</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="form-check">
+                    <input asp-for="Input.EnableOverdueToLender" class="form-check-input" />
+                    <label asp-for="Input.EnableOverdueToLender" class="form-check-label">Send Overdue Summary to Property Owners</label>
+                </div>
+                <span class="field-hint">One summary message per day listing all overdue payments grouped by owner</span>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Advanced</h3>
+
+            <div class="form-group">
+                <div class="form-check">
+                    <input asp-for="Input.EnableIncomingBot" class="form-check-input" disabled />
+                    <label asp-for="Input.EnableIncomingBot" class="form-check-label">
+                        Enable Incoming WhatsApp Bot
+                        <span class="badge badge-info" style="margin-left: 0.5rem;">Coming Soon</span>
+                    </label>
+                </div>
+                <span class="field-hint">Allow landlords to mark payments as paid via WhatsApp messages (Phase 2)</span>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function toggleSection(button) {
+            var content = button.nextElementSibling;
+            var icon = button.querySelector('.toggle-icon');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.textContent = '-';
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '+';
+            }
+        }
+    </script>
+}
+
+<style>
+    .collapsible-section {
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color, #e5e7eb);
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    .collapsible-toggle {
+        width: 100%;
+        padding: 1rem;
+        background: var(--bg-secondary, #f3f4f6);
+        border: none;
+        text-align: left;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+
+    .collapsible-toggle:hover {
+        background: var(--bg-hover, #e5e7eb);
+    }
+
+    .toggle-icon {
+        font-size: 1.25rem;
+        font-weight: bold;
+        width: 1.5rem;
+    }
+
+    .collapsible-content {
+        padding: 1rem;
+        background: var(--bg-primary, #fff);
+    }
+
+    .setup-guide {
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+
+    .setup-guide h4 {
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+        color: var(--text-primary, #1f2937);
+    }
+
+    .setup-guide h4:first-child {
+        margin-top: 0;
+    }
+
+    .setup-guide ol, .setup-guide ul {
+        padding-left: 1.5rem;
+    }
+
+    .setup-guide li {
+        margin-bottom: 0.5rem;
+    }
+
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border-color, #e5e7eb);
+    }
+
+    .form-section:last-of-type {
+        border-bottom: none;
+    }
+
+    .form-section h3 {
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+        color: var(--text-primary, #1f2937);
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-check {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .form-check-input {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+
+    .field-hint {
+        display: block;
+        margin-top: 0.25rem;
+        font-size: 0.85rem;
+        color: var(--text-secondary, #6b7280);
+    }
+
+    .form-actions {
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color, #e5e7eb);
+    }
+
+    .input-group {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .input-group .form-control {
+        flex: 1;
+    }
+
+    .alert {
+        padding: 0.75rem 1rem;
+        border-radius: 0.375rem;
+        margin-bottom: 1rem;
+    }
+
+    .alert-success {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+
+    .alert-danger {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+</style>

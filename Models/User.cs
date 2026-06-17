@@ -40,6 +40,10 @@ public class User
 
     public DateTimeOffset? LastLoginAt { get; set; }
 
+    [StringLength(20)]
+    [Phone]
+    public string? PhoneNumber { get; set; }
+
     // Navigation properties
     [ValidateNever]
     public ICollection<Property> OwnedProperties { get; set; } = new List<Property>();

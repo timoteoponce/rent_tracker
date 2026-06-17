@@ -59,6 +59,13 @@
             <span asp-validation-for="Lease.StartDate" class="text-danger"></span>
         </div>
 
+        <div class="form-group">
+            <label asp-for="Lease.PaymentDueDay"></label>
+            <input asp-for="Lease.PaymentDueDay" type="number" min="1" max="31" class="form-control" />
+            <span asp-validation-for="Lease.PaymentDueDay" class="text-danger"></span>
+            <small class="text-muted">Day of the month when rent is due (1-31). Default is 1st.</small>
+        </div>
+
         <div class="form-group mt-4">
             <button type="submit" class="btn btn-primary">Create Lease</button>
         </div>

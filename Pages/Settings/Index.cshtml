@@ -1,0 +1,19 @@
+@page
+@model RentTracker.Web.Pages.Settings.IndexModel
+@{
+    ViewData["Title"] = "Settings";
+}
+
+<div class="page-header">
+    <h2>Settings</h2>
+</div>
+
+<div class="page-content">
+    <div class="settings-grid">
+        <div class="settings-card">
+            <h3>WhatsApp Notifications</h3>
+            <p>Configure WhatsApp business API for sending payment reminder notifications to tenants and landlords.</p>
+            <a asp-page="./WhatsApp" class="btn btn-primary">Configure WhatsApp</a>
+        </div>
+    </div>
+</div>
