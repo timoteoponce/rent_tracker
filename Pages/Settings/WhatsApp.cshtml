@@ -238,11 +238,11 @@
         function toggleSection(button) {
             var content = button.nextElementSibling;
             var icon = button.querySelector('.toggle-icon');
-            if (content.style.display === 'none') {
-                content.style.display = 'block';
+            if (content.hidden) {
+                content.hidden = false;
                 icon.textContent = '-';
             } else {
-                content.style.display = 'none';
+                content.hidden = true;
                 icon.textContent = '+';
             }
         }
