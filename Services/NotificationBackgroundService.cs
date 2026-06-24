@@ -1,4 +1,5 @@
-using RentTracker.Web.Services;
+using Microsoft.EntityFrameworkCore;
+using RentTracker.Web.Data;
 
 namespace RentTracker.Web.Services;
 
@@ -6,7 +7,7 @@ public class NotificationBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<NotificationBackgroundService> _logger;
-    private readonly TimeSpan _checkInterval = TimeSpan.FromHours(1);
+    private readonly TimeSpan _checkInterval = TimeSpan.FromHours(6);
 
     public NotificationBackgroundService(
         IServiceProvider serviceProvider,
@@ -26,14 +27,31 @@ public class NotificationBackgroundService : BackgroundService
             {
                 using var scope = _serviceProvider.CreateScope();
                 var notificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
+                var context = scope.ServiceProvider.GetRequiredService<RentTrackerDbContext>();
 
-                _logger.LogInformation("Running notification check at {Time}", DateTimeOffset.UtcNow);
+                var settings = await context.WhatsAppSettings.FirstOrDefaultAsync(stoppingToken);
+                var today = DateTimeOffset.UtcNow.Date;
 
-                await notificationService.ProcessPaymentDueSoonNotificationsAsync();
-                await notificationService.ProcessPaymentTodayNotificationsAsync();
-                await notificationService.ProcessPaymentOverdueNotificationsAsync();
+                if (settings?.LastNotificationRunDate?.Date == today)
+                {
+                    _logger.LogInformation("Notifications already ran today at {Time}. Skipping.", settings.LastNotificationRunDate);
+                }
+                else
+                {
+                    _logger.LogInformation("Running notification check at {Time}", DateTimeOffset.UtcNow);
 
-                _logger.LogInformation("Notification check completed at {Time}", DateTimeOffset.UtcNow);
+                    await notificationService.ProcessPaymentDueSoonNotificationsAsync();
+                    await notificationService.ProcessPaymentTodayNotificationsAsync();
+                    await notificationService.ProcessPaymentOverdueNotificationsAsync();
+
+                    if (settings != null)
+                    {
+                        settings.LastNotificationRunDate = DateTimeOffset.UtcNow;
+                        await context.SaveChangesAsync(stoppingToken);
+                    }
+
+                    _logger.LogInformation("Notification check completed at {Time}", DateTimeOffset.UtcNow);
+                }
             }
             catch (Exception ex)
             {

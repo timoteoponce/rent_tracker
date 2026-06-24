@@ -69,14 +69,11 @@ public class NotificationService : INotificationService
 
         foreach (var lease in allLeases)
         {
-            var targetDay = lease.PaymentDueDay - settings.DueSoonDaysBefore;
-            if (targetDay < 1)
-            {
-                var lastDayOfPrevMonth = new DateTime(today.Year, today.Month, 1).AddDays(-1).Day;
-                targetDay = lastDayOfPrevMonth;
-            }
+            var dueDay = ClampDayToMonth(currentPeriod.Year, currentPeriod.Month, lease.PaymentDueDay);
+            var dueDate = new DateTimeOffset(currentPeriod.Year, currentPeriod.Month, dueDay, 0, 0, 0, TimeSpan.Zero);
+            var targetDate = dueDate.AddDays(-settings.DueSoonDaysBefore);
 
-            if (targetDay != today.Day)
+            if (targetDate.Date != today.Date)
                 continue;
 
             if (string.IsNullOrEmpty(lease.Tenant.PhoneNumber))
@@ -91,8 +88,7 @@ public class NotificationService : INotificationService
             if (await HasTodayNotificationAsync(NotificationType.PaymentDueSoon, lease.Id, currentPeriod))
                 continue;
 
-            var dueDate = new DateTimeOffset(currentPeriod.Year, currentPeriod.Month, lease.PaymentDueDay, 0, 0, 0, TimeSpan.Zero);
-            var daysUntilDue = (dueDate - today).Days;
+            var daysUntilDue = (dueDate.Date - today.Date).Days;
             var propertyName = lease.Property?.Name ?? "the property";
             var message = string.Format("Reminder: Your rent payment of {0} BOB for {1} is due in {2} days ({3:dd MMM yyyy}). Please ensure payment is made on time.",
                 lease.AgreedPrice, propertyName, daysUntilDue, dueDate);
@@ -120,7 +116,8 @@ public class NotificationService : INotificationService
 
         foreach (var lease in allLeases)
         {
-            if (lease.PaymentDueDay != today.Day)
+            var dueDay = ClampDayToMonth(currentPeriod.Year, currentPeriod.Month, lease.PaymentDueDay);
+            if (dueDay != today.Day)
                 continue;
 
             if (string.IsNullOrEmpty(lease.Tenant.PhoneNumber))
@@ -135,7 +132,7 @@ public class NotificationService : INotificationService
             if (await HasTodayNotificationAsync(NotificationType.PaymentToday, lease.Id, currentPeriod))
                 continue;
 
-            var dueDate = new DateTimeOffset(currentPeriod.Year, currentPeriod.Month, lease.PaymentDueDay, 0, 0, 0, TimeSpan.Zero);
+            var dueDate = new DateTimeOffset(currentPeriod.Year, currentPeriod.Month, dueDay, 0, 0, 0, TimeSpan.Zero);
             var propertyName = lease.Property?.Name ?? "the property";
             var message = string.Format("Reminder: Your rent payment of {0} BOB for {1} is due today ({2:dd MMM yyyy}). Please make your payment as soon as possible.",
                 lease.AgreedPrice, propertyName, dueDate);
@@ -164,7 +161,8 @@ public class NotificationService : INotificationService
         var overdueItems = new List<OverdueItem>();
         foreach (var lease in allLeases)
         {
-            if (lease.PaymentDueDay >= today.Day)
+            var dueDay = ClampDayToMonth(currentPeriod.Year, currentPeriod.Month, lease.PaymentDueDay);
+            if (dueDay >= today.Day)
                 continue;
 
             var prop = lease.Property;
@@ -175,7 +173,7 @@ public class NotificationService : INotificationService
             {
                 LeaseId = lease.Id,
                 AgreedPrice = lease.AgreedPrice,
-                PaymentDueDay = lease.PaymentDueDay,
+                PaymentDueDay = dueDay,
                 TenantId = lease.TenantId,
                 Tenant = lease.Tenant,
                 OwnerId = prop.OwnerId.Value,
@@ -215,6 +213,9 @@ public class NotificationService : INotificationService
 
             if (settings.EnableOverdueToLender && !string.IsNullOrEmpty(owner.PhoneNumber))
             {
+                if (await HasTodayOwnerSummaryAsync(owner.Id, currentPeriod))
+                    continue;
+
                 var overdueList = items.Select(x =>
                     string.Format("{0} owes {1} BOB for {2} ({3:MMM yyyy})",
                         x.Tenant.FullName, x.AgreedPrice, x.PropertyName, currentPeriod)).ToList();
@@ -223,10 +224,16 @@ public class NotificationService : INotificationService
                     today, overdueList.Count, string.Join("; ", overdueList));
 
                 var (success, error) = await _whatsAppService.SendMessageAsync(owner.PhoneNumber, summaryMessage);
-                await LogNotification(NotificationType.OverdueSummary, Guid.Empty, today, "Owner", owner.Id,
+                await LogNotification(NotificationType.OverdueSummary, null, currentPeriod, "Owner", owner.Id,
                     owner.PhoneNumber, summaryMessage, success ? NotificationLogStatus.Sent : NotificationLogStatus.Failed, error);
             }
         }
+    }
+
+    private static int ClampDayToMonth(int year, int month, int day)
+    {
+        var daysInMonth = DateTime.DaysInMonth(year, month);
+        return Math.Min(day, daysInMonth);
     }
 
     private async Task<bool> HasReceivedPaymentForPeriodAsync(Guid leaseId, DateTimeOffset forPeriod)
@@ -243,19 +250,28 @@ public class NotificationService : INotificationService
     private async Task<bool> HasTodayNotificationAsync(string type, Guid leaseId, DateTimeOffset forPeriod, Guid? recipientUserId = null)
     {
         var todayDate = DateTimeOffset.UtcNow.Date;
-        var query = _context.NotificationLogs.Where(n =>
-            n.Type == type &&
-            n.LeaseId == leaseId &&
+        var candidates = await _context.NotificationLogs
+            .Where(n => n.Type == type && n.LeaseId == leaseId)
+            .ToListAsync();
+
+        return candidates.Any(n =>
+            n.ForPeriod.Year == forPeriod.Year &&
+            n.ForPeriod.Month == forPeriod.Month &&
+            n.SentAt.Date == todayDate &&
+            (!recipientUserId.HasValue || n.RecipientUserId == recipientUserId.Value));
+    }
+
+    private async Task<bool> HasTodayOwnerSummaryAsync(Guid ownerId, DateTimeOffset forPeriod)
+    {
+        var todayDate = DateTimeOffset.UtcNow.Date;
+        var candidates = await _context.NotificationLogs
+            .Where(n => n.Type == NotificationType.OverdueSummary && n.RecipientUserId == ownerId)
+            .ToListAsync();
+
+        return candidates.Any(n =>
             n.ForPeriod.Year == forPeriod.Year &&
             n.ForPeriod.Month == forPeriod.Month &&
             n.SentAt.Date == todayDate);
-
-        if (recipientUserId.HasValue)
-        {
-            query = query.Where(n => n.RecipientUserId == recipientUserId.Value);
-        }
-
-        return await query.AnyAsync();
     }
 
     private async Task LogSkippedNotification(string type, Guid leaseId, DateTimeOffset forPeriod, string recipientRole, Guid recipientUserId, string reason)
@@ -278,7 +294,7 @@ public class NotificationService : INotificationService
         await _context.SaveChangesAsync();
     }
 
-    private async Task LogNotification(string type, Guid leaseId, DateTimeOffset forPeriod, string recipientRole,
+    private async Task LogNotification(string type, Guid? leaseId, DateTimeOffset forPeriod, string recipientRole,
         Guid recipientUserId, string? phoneNumber, string message, string status, string? error)
     {
         var log = new NotificationLog

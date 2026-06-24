@@ -551,7 +551,7 @@ Design ready but not implemented. Would allow landlords to mark payments as paid
 
 ### Credential Security
 
-Access tokens are AES-256 encrypted in the database. The encryption key is stored in `appsettings.json` under `WhatsApp:EncryptionKey`. If empty, a key is auto-generated on first startup.
+Access tokens are AES-256 encrypted in the database with a random IV per encryption. The encryption key **must** be configured in `appsettings.json` under `WhatsApp:EncryptionKey` before the app can encrypt or decrypt tokens. Generate a key by calling `EncryptionHelper.GenerateKey()` from code or any secure random hex generator (64 characters).
 
 ### Disabling Notifications for Users Without Phone Numbers
 

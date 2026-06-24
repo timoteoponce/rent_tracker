@@ -10,7 +10,7 @@ public class NotificationLog
     [StringLength(50)]
     public string Type { get; set; } = string.Empty;
 
-    public Guid LeaseId { get; set; }
+    public Guid? LeaseId { get; set; }
 
     public DateTimeOffset ForPeriod { get; set; }
 

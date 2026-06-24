@@ -146,7 +146,8 @@ public class RentTrackerDbContext : DbContext
             entity.HasOne(n => n.Lease)
                 .WithMany()
                 .HasForeignKey(n => n.LeaseId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired(false);
 
             entity.HasOne(n => n.RecipientUser)
                 .WithMany()

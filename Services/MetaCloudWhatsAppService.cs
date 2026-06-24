@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using RentTracker.Web.Data;
 using RentTracker.Web.Helpers;
@@ -30,7 +31,7 @@ public class MetaCloudWhatsAppService : IWhatsAppService
 
     private async Task<WhatsAppSettings?> GetSettingsAsync()
     {
-        return await Task.Run(() => _context.WhatsAppSettings.FirstOrDefault());
+        return await _context.WhatsAppSettings.FirstOrDefaultAsync();
     }
 
     private async Task<(string? Token, string? PhoneNumberId, string? Error)> GetCredentialsAsync()

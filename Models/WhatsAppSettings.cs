@@ -38,6 +38,8 @@ public class WhatsAppSettings
 
     public bool EnableIncomingBot { get; set; } = false;
 
+    public DateTimeOffset? LastNotificationRunDate { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public DateTimeOffset? UpdatedAt { get; set; }
