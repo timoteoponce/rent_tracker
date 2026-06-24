@@ -33,10 +33,8 @@ public class NotificationLog
 
     public DateTimeOffset SentAt { get; set; } = DateTimeOffset.UtcNow;
 
-    [ValidateNever]
-    public Lease Lease { get; set; } = null!;
+    public Lease? Lease { get; set; }
 
-    [ValidateNever]
     public User RecipientUser { get; set; } = null!;
 }
 

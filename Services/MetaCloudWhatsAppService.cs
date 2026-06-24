@@ -1,7 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using RentTracker.Web.Data;
 using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
@@ -14,19 +13,16 @@ public class MetaCloudWhatsAppService : IWhatsAppService
     private readonly HttpClient _httpClient;
     private readonly EncryptionHelper _encryption;
     private readonly RentTrackerDbContext _context;
-    private readonly IConfiguration _configuration;
     private const string ApiVersion = "v21.0";
 
     public MetaCloudWhatsAppService(
         HttpClient httpClient,
         EncryptionHelper encryption,
-        RentTrackerDbContext context,
-        IConfiguration configuration)
+        RentTrackerDbContext context)
     {
         _httpClient = httpClient;
         _encryption = encryption;
         _context = context;
-        _configuration = configuration;
     }
 
     private async Task<WhatsAppSettings?> GetSettingsAsync()
@@ -75,6 +71,7 @@ public class MetaCloudWhatsAppService : IWhatsAppService
             request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
             var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
             var responseBody = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)

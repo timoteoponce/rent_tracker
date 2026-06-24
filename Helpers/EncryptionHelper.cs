@@ -25,7 +25,7 @@ public class EncryptionHelper
             throw new InvalidOperationException(
                 "Configuration 'WhatsApp:EncryptionKey' is missing. " +
                 "Add a 64-character hex key to appsettings.json under 'WhatsApp:EncryptionKey'. " +
-                "You can generate one with: dotnet run --project RentTracker.csproj -- --generate-key (or call EncryptionHelper.GenerateKey() from code).");
+                "You can generate one by calling EncryptionHelper.GenerateKey() from code.");
         }
 
         using var sha256 = SHA256.Create();

@@ -32,13 +32,21 @@ public class NotificationBackgroundService : BackgroundService
                 var settings = await context.WhatsAppSettings.FirstOrDefaultAsync(stoppingToken);
                 var today = DateTimeOffset.UtcNow.Date;
 
-                if (settings?.LastNotificationRunDate?.Date == today)
+                // Check if we're within the wake-up window (8:00 - 22:00 local time)
+                var timeZoneOffset = TimeSpan.FromHours(settings?.TimeZoneOffset ?? -4);
+                var localTime = DateTimeOffset.UtcNow.ToOffset(timeZoneOffset);
+                var localHour = localTime.Hour;
+                if (localHour < 8 || localHour >= 22)
+                {
+                    _logger.LogInformation("Local time is {LocalTime} (hour {LocalHour}), outside wake-up window (8:00-22:00). Skipping notification check.", localTime, localHour);
+                }
+                else if (settings?.LastNotificationRunDate?.Date == today)
                 {
                     _logger.LogInformation("Notifications already ran today at {Time}. Skipping.", settings.LastNotificationRunDate);
                 }
                 else
                 {
-                    _logger.LogInformation("Running notification check at {Time}", DateTimeOffset.UtcNow);
+                    _logger.LogInformation("Running notification check at {Time} (local time: {LocalTime})", DateTimeOffset.UtcNow, localTime);
 
                     await notificationService.ProcessPaymentDueSoonNotificationsAsync();
                     await notificationService.ProcessPaymentTodayNotificationsAsync();

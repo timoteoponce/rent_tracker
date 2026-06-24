@@ -59,7 +59,8 @@ public class WhatsAppModel : PageModel
             EnableOverdueToTenant = settings.EnableOverdueToTenant,
             EnableOverdueToLender = settings.EnableOverdueToLender,
             DueSoonDaysBefore = settings.DueSoonDaysBefore,
-            EnableIncomingBot = settings.EnableIncomingBot
+            TimeZoneOffset = settings.TimeZoneOffset,
+            EnableIncomingBot = false
         };
     }
 
@@ -81,7 +82,8 @@ public class WhatsAppModel : PageModel
         settings.EnableOverdueToTenant = Input.EnableOverdueToTenant;
         settings.EnableOverdueToLender = Input.EnableOverdueToLender;
         settings.DueSoonDaysBefore = Input.DueSoonDaysBefore;
-        settings.EnableIncomingBot = Input.EnableIncomingBot;
+        settings.TimeZoneOffset = Input.TimeZoneOffset;
+        settings.EnableIncomingBot = false;
 
         if (!string.IsNullOrWhiteSpace(Input.AccessToken) && Input.AccessToken != "********")
         {
@@ -135,6 +137,8 @@ public class WhatsAppModel : PageModel
         public bool EnableOverdueToLender { get; set; } = true;
         [Range(1, 30)]
         public int DueSoonDaysBefore { get; set; } = 3;
+        [Range(-12, 14)]
+        public int TimeZoneOffset { get; set; } = -4;
         public bool EnableIncomingBot { get; set; }
         public string TestPhoneNumber { get; set; } = "";
     }

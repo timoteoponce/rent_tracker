@@ -529,7 +529,7 @@ The app supports WhatsApp Business API notifications for payment reminders. This
 | `MetaCloudWhatsAppService` | `Services/MetaCloudWhatsAppService.cs` | Meta Cloud API via HttpClient (no NuGet dependency) |
 | `INotificationService` | `Services/INotificationService.cs` | Interface: notification processing, settings management |
 | `NotificationService` | `Services/NotificationService.cs` | Core logic: determine what/when/who to notify |
-| `NotificationBackgroundService` | `Services/NotificationBackgroundService.cs` | BackgroundService running hourly |
+| `NotificationBackgroundService` | `Services/NotificationBackgroundService.cs` | BackgroundService running every 6 hours |
 
 ### Settings Page
 

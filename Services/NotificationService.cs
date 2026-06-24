@@ -161,25 +161,47 @@ public class NotificationService : INotificationService
         var overdueItems = new List<OverdueItem>();
         foreach (var lease in allLeases)
         {
-            var dueDay = ClampDayToMonth(currentPeriod.Year, currentPeriod.Month, lease.PaymentDueDay);
-            if (dueDay >= today.Day)
-                continue;
-
             var prop = lease.Property;
             if (prop == null || prop.OwnerId == null)
                 continue;
 
-            overdueItems.Add(new OverdueItem
+            // Check all months from lease start to current month for overdue payments
+            var startMonth = new DateTimeOffset(lease.StartDate.Year, lease.StartDate.Month, 1, 0, 0, 0, TimeSpan.Zero);
+            var month = startMonth;
+            while (month <= currentPeriod)
             {
-                LeaseId = lease.Id,
-                AgreedPrice = lease.AgreedPrice,
-                PaymentDueDay = dueDay,
-                TenantId = lease.TenantId,
-                Tenant = lease.Tenant,
-                OwnerId = prop.OwnerId.Value,
-                Owner = prop.Owner,
-                PropertyName = prop.Name ?? "the property"
-            });
+                var dueDay = ClampDayToMonth(month.Year, month.Month, lease.PaymentDueDay);
+                var dueDate = new DateTimeOffset(month.Year, month.Month, dueDay, 0, 0, 0, TimeSpan.Zero);
+                
+                if (dueDate >= today.Date)
+                {
+                    // Due date is in the future, skip this month
+                    month = month.AddMonths(1);
+                    continue;
+                }
+
+                if (await HasReceivedPaymentForPeriodAsync(lease.Id, month))
+                {
+                    // Payment received for this month, skip
+                    month = month.AddMonths(1);
+                    continue;
+                }
+
+                overdueItems.Add(new OverdueItem
+                {
+                    LeaseId = lease.Id,
+                    AgreedPrice = lease.AgreedPrice,
+                    PaymentDueDay = dueDay,
+                    ForPeriod = month,
+                    TenantId = lease.TenantId,
+                    Tenant = lease.Tenant,
+                    OwnerId = prop.OwnerId.Value,
+                    Owner = prop.Owner,
+                    PropertyName = prop.Name ?? "the property"
+                });
+
+                month = month.AddMonths(1);
+            }
         }
 
         foreach (var ownerGroup in overdueItems.GroupBy(x => x.OwnerId))
@@ -193,20 +215,20 @@ public class NotificationService : INotificationService
                 {
                     if (string.IsNullOrEmpty(item.Tenant.PhoneNumber))
                     {
-                        await LogSkippedNotification(NotificationType.PaymentOverdue, item.LeaseId, currentPeriod, "Tenant", item.TenantId, "No phone number");
+                        await LogSkippedNotification(NotificationType.PaymentOverdue, item.LeaseId, item.ForPeriod, "Tenant", item.TenantId, "No phone number");
                         continue;
                     }
 
-                    if (await HasTodayNotificationAsync(NotificationType.PaymentOverdue, item.LeaseId, currentPeriod, item.TenantId))
+                    if (await HasTodayNotificationAsync(NotificationType.PaymentOverdue, item.LeaseId, item.ForPeriod, item.TenantId))
                         continue;
 
-                    var dueDate = new DateTimeOffset(currentPeriod.Year, currentPeriod.Month, item.PaymentDueDay, 0, 0, 0, TimeSpan.Zero);
+                    var dueDate = new DateTimeOffset(item.ForPeriod.Year, item.ForPeriod.Month, item.PaymentDueDay, 0, 0, 0, TimeSpan.Zero);
                     var daysOverdue = (today - dueDate).Days;
                     var message = string.Format("Alert: Your rent payment of {0} BOB for {1} was due on {2:dd MMM yyyy} ({3} day(s) overdue). Please make payment immediately to avoid further charges.",
                         item.AgreedPrice, item.PropertyName, dueDate, daysOverdue);
 
                     var (success, error) = await _whatsAppService.SendMessageAsync(item.Tenant.PhoneNumber, message);
-                    await LogNotification(NotificationType.PaymentOverdue, item.LeaseId, currentPeriod, "Tenant", item.TenantId,
+                    await LogNotification(NotificationType.PaymentOverdue, item.LeaseId, item.ForPeriod, "Tenant", item.TenantId,
                         item.Tenant.PhoneNumber, message, success ? NotificationLogStatus.Sent : NotificationLogStatus.Failed, error);
                 }
             }
@@ -218,7 +240,7 @@ public class NotificationService : INotificationService
 
                 var overdueList = items.Select(x =>
                     string.Format("{0} owes {1} BOB for {2} ({3:MMM yyyy})",
-                        x.Tenant.FullName, x.AgreedPrice, x.PropertyName, currentPeriod)).ToList();
+                        x.Tenant.FullName, x.AgreedPrice, x.PropertyName, x.ForPeriod)).ToList();
 
                 var summaryMessage = string.Format("Overdue Payments Summary for {0:dd MMM yyyy}: You have {1} overdue payment(s): {2}. Please follow up with your tenants.",
                     today, overdueList.Count, string.Join("; ", overdueList));
@@ -320,6 +342,7 @@ public class NotificationService : INotificationService
         public Guid LeaseId { get; set; }
         public decimal AgreedPrice { get; set; }
         public int PaymentDueDay { get; set; }
+        public DateTimeOffset ForPeriod { get; set; }
         public Guid TenantId { get; set; }
         public User Tenant { get; set; } = null!;
         public Guid OwnerId { get; set; }

@@ -19,11 +19,11 @@
     }
 
     <div class="collapsible-section">
-        <button type="button" class="collapsible-toggle" onclick="toggleSection(this)">
+        <button type="button" class="collapsible-toggle" onclick="toggleSection(this)" aria-expanded="false" aria-controls="setup-guide-content">
             <span class="toggle-icon">+</span>
             <span>WhatsApp Business App Setup Guide (Dedicated SIM Card)</span>
         </button>
-        <div class="collapsible-content" hidden>
+        <div id="setup-guide-content" class="collapsible-content" hidden>
             <div class="setup-guide">
                 <p>Follow these steps to set up a dedicated SIM card for sending WhatsApp notifications through the Meta WhatsApp Business API.</p>
 
@@ -180,6 +180,20 @@
             </div>
 
             <div class="form-group">
+                <label asp-for="Input.TimeZoneOffset">Time Zone</label>
+                <select asp-for="Input.TimeZoneOffset" class="form-control">
+                    <option value="-8">UTC-08:00 (US Pacific)</option>
+                    <option value="-5">UTC-05:00 (US Eastern)</option>
+                    <option value="-4" selected>UTC-04:00 (Bolivia)</option>
+                    <option value="0">UTC+00:00 (UTC)</option>
+                    <option value="1">UTC+01:00 (Europe Central)</option>
+                    <option value="5.5">UTC+05:30 (India)</option>
+                    <option value="8">UTC+08:00 (China)</option>
+                </select>
+                <span class="field-hint">Notifications will be sent between 8:00 and 22:00 in this time zone</span>
+            </div>
+
+            <div class="form-group">
                 <div class="form-check">
                     <input asp-for="Input.EnablePaymentToday" class="form-check-input" />
                     <label asp-for="Input.EnablePaymentToday" class="form-check-label">Payment Due Today</label>
@@ -240,9 +254,11 @@
             var icon = button.querySelector('.toggle-icon');
             if (content.hidden) {
                 content.hidden = false;
+                button.setAttribute('aria-expanded', 'true');
                 icon.textContent = '-';
             } else {
                 content.hidden = true;
+                button.setAttribute('aria-expanded', 'false');
                 icon.textContent = '+';
             }
         }

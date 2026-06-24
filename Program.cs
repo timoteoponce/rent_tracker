@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Http;
 using RentTracker.Web.Data;
 using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
@@ -188,6 +187,7 @@ public class Program
                 IsEnabled = false,
                 Provider = "MetaCloud",
                 DueSoonDaysBefore = 3,
+                TimeZoneOffset = -4,
                 EnablePaymentDueSoon = true,
                 EnablePaymentToday = true,
                 EnablePaymentOverdue = true,

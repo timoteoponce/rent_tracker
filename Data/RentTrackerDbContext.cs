@@ -131,6 +131,7 @@ public class RentTrackerDbContext : DbContext
             entity.Property(s => s.PhoneNumberId).HasMaxLength(100);
             entity.Property(s => s.BusinessAccountId).HasMaxLength(100);
             entity.Property(s => s.VerifyToken).HasMaxLength(200);
+            entity.Property(s => s.TimeZoneOffset).HasDefaultValue(-4);
         });
 
         // NotificationLog configuration

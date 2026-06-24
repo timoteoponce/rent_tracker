@@ -36,6 +36,9 @@ public class WhatsAppSettings
     [Range(1, 30)]
     public int DueSoonDaysBefore { get; set; } = 3;
 
+    [Range(-12, 14)]
+    public int TimeZoneOffset { get; set; } = -4;
+
     public bool EnableIncomingBot { get; set; } = false;
 
     public DateTimeOffset? LastNotificationRunDate { get; set; }
