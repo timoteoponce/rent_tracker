@@ -41,6 +41,11 @@ public class NotificationService : INotificationService
             existing.EnableOverdueToTenant = settings.EnableOverdueToTenant;
             existing.EnableOverdueToLender = settings.EnableOverdueToLender;
             existing.DueSoonDaysBefore = settings.DueSoonDaysBefore;
+            existing.TimeZoneOffset = settings.TimeZoneOffset;
+            existing.TestTemplateName = settings.TestTemplateName;
+            existing.PaymentDueSoonTemplateName = settings.PaymentDueSoonTemplateName;
+            existing.PaymentTodayTemplateName = settings.PaymentTodayTemplateName;
+            existing.PaymentOverdueTemplateName = settings.PaymentOverdueTemplateName;
             existing.EnableIncomingBot = settings.EnableIncomingBot;
             existing.UpdatedAt = DateTimeOffset.UtcNow;
         }
@@ -85,10 +90,16 @@ public class NotificationService : INotificationService
 
             var daysUntilDue = (dueDate.Date - today.Date).Days;
             var propertyName = lease.Property?.Name ?? "the property";
-            var message = string.Format("Reminder: Your rent payment of {0} BOB for {1} is due in {2} days ({3:dd MMM yyyy}). Please ensure payment is made on time.",
-                lease.AgreedPrice, propertyName, daysUntilDue, dueDate);
+            var parameters = new List<string>
+            {
+                lease.AgreedPrice.ToString(),
+                propertyName,
+                daysUntilDue.ToString(),
+                dueDate.ToString("dd MMM yyyy")
+            };
 
-            var (success, error) = await _whatsAppService.SendMessageAsync(lease.Tenant.PhoneNumber, message);
+            var (success, error) = await _whatsAppService.SendTemplateAsync(lease.Tenant.PhoneNumber, settings.PaymentDueSoonTemplateName, parameters);
+            var message = $"Template: {settings.PaymentDueSoonTemplateName}, Params: {string.Join(", ", parameters)}";
             await LogNotification(NotificationType.PaymentDueSoon, lease.Id, currentPeriod, "Tenant", lease.TenantId,
                 lease.Tenant.PhoneNumber, message, success ? NotificationLogStatus.Sent : NotificationLogStatus.Failed, error);
         }
@@ -129,10 +140,15 @@ public class NotificationService : INotificationService
 
             var dueDate = new DateTimeOffset(currentPeriod.Year, currentPeriod.Month, dueDay, 0, 0, 0, TimeSpan.Zero);
             var propertyName = lease.Property?.Name ?? "the property";
-            var message = string.Format("Reminder: Your rent payment of {0} BOB for {1} is due today ({2:dd MMM yyyy}). Please make your payment as soon as possible.",
-                lease.AgreedPrice, propertyName, dueDate);
+            var parameters = new List<string>
+            {
+                lease.AgreedPrice.ToString(),
+                propertyName,
+                dueDate.ToString("dd MMM yyyy")
+            };
 
-            var (success, error) = await _whatsAppService.SendMessageAsync(lease.Tenant.PhoneNumber, message);
+            var (success, error) = await _whatsAppService.SendTemplateAsync(lease.Tenant.PhoneNumber, settings.PaymentTodayTemplateName, parameters);
+            var message = $"Template: {settings.PaymentTodayTemplateName}, Params: {string.Join(", ", parameters)}";
             await LogNotification(NotificationType.PaymentToday, lease.Id, currentPeriod, "Tenant", lease.TenantId,
                 lease.Tenant.PhoneNumber, message, success ? NotificationLogStatus.Sent : NotificationLogStatus.Failed, error);
         }
@@ -219,10 +235,16 @@ public class NotificationService : INotificationService
 
                     var dueDate = new DateTimeOffset(item.ForPeriod.Year, item.ForPeriod.Month, item.PaymentDueDay, 0, 0, 0, TimeSpan.Zero);
                     var daysOverdue = (today - dueDate).Days;
-                    var message = string.Format("Alert: Your rent payment of {0} BOB for {1} was due on {2:dd MMM yyyy} ({3} day(s) overdue). Please make payment immediately to avoid further charges.",
-                        item.AgreedPrice, item.PropertyName, dueDate, daysOverdue);
+                    var parameters = new List<string>
+                    {
+                        item.AgreedPrice.ToString(),
+                        item.PropertyName,
+                        dueDate.ToString("dd MMM yyyy"),
+                        daysOverdue.ToString()
+                    };
 
-                    var (success, error) = await _whatsAppService.SendMessageAsync(item.Tenant.PhoneNumber, message);
+                    var (success, error) = await _whatsAppService.SendTemplateAsync(item.Tenant.PhoneNumber, settings.PaymentOverdueTemplateName, parameters);
+                    var message = $"Template: {settings.PaymentOverdueTemplateName}, Params: {string.Join(", ", parameters)}";
                     await LogNotification(NotificationType.PaymentOverdue, item.LeaseId, item.ForPeriod, "Tenant", item.TenantId,
                         item.Tenant.PhoneNumber, message, success ? NotificationLogStatus.Sent : NotificationLogStatus.Failed, error);
                 }
@@ -233,14 +255,20 @@ public class NotificationService : INotificationService
                 if (await HasTodayOwnerSummaryAsync(owner.Id, currentPeriod))
                     continue;
 
-                var overdueList = items.Select(x =>
+                var overdueCount = items.Count.ToString();
+                var overdueList = string.Join("; ", items.Select(x =>
                     string.Format("{0} owes {1} BOB for {2} ({3:MMM yyyy})",
-                        x.Tenant.FullName, x.AgreedPrice, x.PropertyName, x.ForPeriod)).ToList();
+                        x.Tenant.FullName, x.AgreedPrice, x.PropertyName, x.ForPeriod)));
 
-                var summaryMessage = string.Format("Overdue Payments Summary for {0:dd MMM yyyy}: You have {1} overdue payment(s): {2}. Please follow up with your tenants.",
-                    today, overdueList.Count, string.Join("; ", overdueList));
+                var summaryParameters = new List<string>
+                {
+                    today.ToString("dd MMM yyyy"),
+                    overdueCount,
+                    overdueList
+                };
 
-                var (success, error) = await _whatsAppService.SendMessageAsync(owner.PhoneNumber, summaryMessage);
+                var (success, error) = await _whatsAppService.SendTemplateAsync(owner.PhoneNumber, settings.OverdueSummaryTemplateName, summaryParameters);
+                var summaryMessage = $"Template: {settings.OverdueSummaryTemplateName}, Params: {string.Join(", ", summaryParameters)}";
                 await LogNotification(NotificationType.OverdueSummary, null, currentPeriod, "Owner", owner.Id,
                     owner.PhoneNumber, summaryMessage, success ? NotificationLogStatus.Sent : NotificationLogStatus.Failed, error);
             }

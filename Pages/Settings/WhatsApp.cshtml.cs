@@ -57,6 +57,11 @@ public class WhatsAppModel : PageModel
             EnableOverdueToLender = settings.EnableOverdueToLender,
             DueSoonDaysBefore = settings.DueSoonDaysBefore,
             TimeZoneOffset = settings.TimeZoneOffset,
+            TestTemplateName = settings.TestTemplateName,
+            PaymentDueSoonTemplateName = settings.PaymentDueSoonTemplateName,
+            PaymentTodayTemplateName = settings.PaymentTodayTemplateName,
+            PaymentOverdueTemplateName = settings.PaymentOverdueTemplateName,
+            OverdueSummaryTemplateName = settings.OverdueSummaryTemplateName,
             EnableIncomingBot = false
         };
     }
@@ -80,6 +85,11 @@ public class WhatsAppModel : PageModel
         settings.EnableOverdueToLender = Input.EnableOverdueToLender;
         settings.DueSoonDaysBefore = Input.DueSoonDaysBefore;
         settings.TimeZoneOffset = Input.TimeZoneOffset;
+        settings.TestTemplateName = Input.TestTemplateName;
+        settings.PaymentDueSoonTemplateName = Input.PaymentDueSoonTemplateName;
+        settings.PaymentTodayTemplateName = Input.PaymentTodayTemplateName;
+        settings.PaymentOverdueTemplateName = Input.PaymentOverdueTemplateName;
+        settings.OverdueSummaryTemplateName = Input.OverdueSummaryTemplateName;
         settings.EnableIncomingBot = false;
 
         if (!string.IsNullOrWhiteSpace(Input.AccessToken) && Input.AccessToken != "********")
@@ -131,6 +141,11 @@ public class WhatsAppModel : PageModel
         public int DueSoonDaysBefore { get; set; } = 3;
         [Range(-12, 14)]
         public int TimeZoneOffset { get; set; } = -4;
+        public string TestTemplateName { get; set; } = "renttracker_test";
+        public string PaymentDueSoonTemplateName { get; set; } = "renttracker_payment_due_soon";
+        public string PaymentTodayTemplateName { get; set; } = "renttracker_payment_today";
+        public string PaymentOverdueTemplateName { get; set; } = "renttracker_payment_overdue";
+        public string OverdueSummaryTemplateName { get; set; } = "renttracker_overdue_summary";
         public bool EnableIncomingBot { get; set; }
     }
 }

@@ -231,6 +231,41 @@
         </div>
 
         <div class="form-section">
+            <h3>Message Templates</h3>
+            <span class="field-hint">Template names from Meta Business Suite. Required for "Ready for Testing" mode.</span>
+
+            <div class="form-group">
+                <label asp-for="Input.TestTemplateName">Test Template</label>
+                <input asp-for="Input.TestTemplateName" class="form-control" />
+                <span class="field-hint">Default: renttracker_test</span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Input.PaymentDueSoonTemplateName">Payment Due Soon Template</label>
+                <input asp-for="Input.PaymentDueSoonTemplateName" class="form-control" />
+                <span class="field-hint">Default: renttracker_payment_due_soon</span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Input.PaymentTodayTemplateName">Payment Due Today Template</label>
+                <input asp-for="Input.PaymentTodayTemplateName" class="form-control" />
+                <span class="field-hint">Default: renttracker_payment_today</span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Input.PaymentOverdueTemplateName">Payment Overdue Template</label>
+                <input asp-for="Input.PaymentOverdueTemplateName" class="form-control" />
+                <span class="field-hint">Default: renttracker_payment_overdue</span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Input.OverdueSummaryTemplateName">Overdue Summary Template</label>
+                <input asp-for="Input.OverdueSummaryTemplateName" class="form-control" />
+                <span class="field-hint">Default: renttracker_overdue_summary</span>
+            </div>
+        </div>
+
+        <div class="form-section">
             <h3>Advanced</h3>
 
             <div class="form-group">

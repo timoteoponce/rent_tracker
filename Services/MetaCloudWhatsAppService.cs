@@ -166,8 +166,125 @@ public class MetaCloudWhatsAppService : IWhatsAppService
         }
     }
 
+    public async Task<(bool Success, string? Error)> SendTemplateAsync(string phoneNumber, string templateName, List<string> parameters)
+    {
+        var (token, phoneNumberId, error) = await GetCredentialsAsync();
+        if (token == null || phoneNumberId == null)
+        {
+            return (false, error ?? "WhatsApp not configured");
+        }
+
+        var normalizedPhone = NormalizePhoneNumber(phoneNumber);
+        if (string.IsNullOrEmpty(normalizedPhone))
+        {
+            return (false, "Phone number is empty after normalization");
+        }
+
+        try
+        {
+            var url = $"https://graph.facebook.com/{ApiVersion}/{phoneNumberId}/messages";
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var templateComponents = new List<object>();
+            if (parameters.Any())
+            {
+                templateComponents.Add(new
+                {
+                    type = "body",
+                    parameters = parameters.Select(p => new { type = "text", text = p }).ToList()
+                });
+            }
+
+            var payload = new
+            {
+                messaging_product = "whatsapp",
+                to = normalizedPhone,
+                type = "template",
+                template = new
+                {
+                    name = templateName,
+                    language = new { code = "en_US" },
+                    components = templateComponents
+                }
+            };
+
+            var jsonPayload = JsonSerializer.Serialize(payload);
+            
+            Console.WriteLine($"[WhatsApp] Sending template {templateName} to {normalizedPhone} via {url}");
+            Console.WriteLine($"[WhatsApp] Payload: {jsonPayload}");
+            
+            _logger.LogInformation("Sending WhatsApp template {TemplateName} to {PhoneNumber} via {Url}", templateName, normalizedPhone, url);
+            _logger.LogDebug("Request payload: {Payload}", jsonPayload);
+
+            request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.SendAsync(request);
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            Console.WriteLine($"[WhatsApp] Response status: {(int)response.StatusCode}");
+            Console.WriteLine($"[WhatsApp] Response body: {responseBody}");
+            
+            _logger.LogInformation("WhatsApp API response status: {StatusCode}", (int)response.StatusCode);
+            _logger.LogDebug("WhatsApp API response body: {ResponseBody}", responseBody);
+
+            if (response.IsSuccessStatusCode)
+            {
+                using var doc = JsonDocument.Parse(responseBody);
+                if (doc.RootElement.TryGetProperty("error", out var errorElement))
+                {
+                    var errorMessage = errorElement.TryGetProperty("message", out var msgElement)
+                        ? msgElement.GetString()
+                        : responseBody;
+                    _logger.LogError("WhatsApp API returned error: {ErrorMessage}", errorMessage);
+                    Console.WriteLine($"[WhatsApp] API error in body: {errorMessage}");
+                    return (false, errorMessage);
+                }
+
+                _logger.LogInformation("WhatsApp template {TemplateName} sent successfully to {PhoneNumber}", templateName, normalizedPhone);
+                Console.WriteLine($"[WhatsApp] Template {templateName} sent successfully to {normalizedPhone}");
+                return (true, null);
+            }
+            else
+            {
+                var errorMessage = responseBody;
+                try
+                {
+                    using var doc = JsonDocument.Parse(responseBody);
+                    if (doc.RootElement.TryGetProperty("error", out var errorElement))
+                    {
+                        errorMessage = errorElement.TryGetProperty("message", out var msgElement)
+                            ? msgElement.GetString() ?? responseBody
+                            : responseBody;
+                    }
+                }
+                catch
+                {
+                    // If response body isn't valid JSON, use the raw body
+                }
+
+                _logger.LogError("WhatsApp API error ({StatusCode}): {ErrorMessage}", (int)response.StatusCode, errorMessage);
+                Console.WriteLine($"[WhatsApp] API error ({(int)response.StatusCode}): {errorMessage}");
+                return (false, errorMessage);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending WhatsApp template {TemplateName} to {PhoneNumber}", templateName, normalizedPhone);
+            Console.WriteLine($"[WhatsApp] Exception: {ex.Message}");
+            return (false, ex.Message);
+        }
+    }
+
     public async Task<(bool Success, string? Error)> SendTestMessageAsync(string phoneNumber)
     {
-        return await SendMessageAsync(phoneNumber, "This is a test message from RentTracker. If you receive this, WhatsApp notifications are configured correctly.");
+        var settings = await GetSettingsAsync();
+        if (settings == null)
+        {
+            return (false, "WhatsApp settings not configured");
+        }
+
+        return await SendTemplateAsync(phoneNumber, settings.TestTemplateName, new List<string>());
     }
 }

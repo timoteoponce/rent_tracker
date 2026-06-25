@@ -39,6 +39,21 @@ public class WhatsAppSettings
     [Range(-12, 14)]
     public int TimeZoneOffset { get; set; } = -4;
 
+    [StringLength(100)]
+    public string TestTemplateName { get; set; } = "renttracker_test";
+
+    [StringLength(100)]
+    public string PaymentDueSoonTemplateName { get; set; } = "renttracker_payment_due_soon";
+
+    [StringLength(100)]
+    public string PaymentTodayTemplateName { get; set; } = "renttracker_payment_today";
+
+    [StringLength(100)]
+    public string PaymentOverdueTemplateName { get; set; } = "renttracker_payment_overdue";
+
+    [StringLength(100)]
+    public string OverdueSummaryTemplateName { get; set; } = "renttracker_overdue_summary";
+
     public bool EnableIncomingBot { get; set; } = false;
 
     public DateTimeOffset? LastNotificationRunDate { get; set; }
