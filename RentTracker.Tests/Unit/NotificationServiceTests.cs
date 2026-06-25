@@ -123,12 +123,26 @@ public class NotificationServiceTests
         Assert.True(resultTask.GetAwaiter().GetResult());
     }
 
+    [Theory]
+    [InlineData("+59171687570", "59171687570")]      // With +, stripped
+    [InlineData("59171687570", "59171687570")]       // Digits only
+    [InlineData("+591 71687570", "59171687570")]     // With space
+    [InlineData("591-716-87570", "59171687570")]     // With dashes
+    [InlineData("+591 (716) 87570", "59171687570")]  // With parentheses
+    [InlineData("", "")]                              // Empty
+    [InlineData(null, null)]                          // Null
+    public void NormalizePhoneNumber_FormatsCorrectly(string input, string expected)
+    {
+        var result = RentTracker.Web.Services.MetaCloudWhatsAppService.NormalizePhoneNumber(input);
+        Assert.Equal(expected, result);
+    }
+
     private class FakeWhatsAppService : RentTracker.Web.Services.IWhatsAppService
     {
         public Task<(bool Success, string? Error)> SendMessageAsync(string phoneNumber, string message)
             => Task.FromResult((true, (string?)null));
 
-        public Task<(bool Success, string? Error)> TestConnectionAsync(string testPhoneNumber)
+        public Task<(bool Success, string? Error)> SendTestMessageAsync(string phoneNumber)
             => Task.FromResult((true, (string?)null));
     }
 }

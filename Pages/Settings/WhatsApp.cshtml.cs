@@ -34,9 +34,6 @@ public class WhatsAppModel : PageModel
     [TempData]
     public string? ErrorMessage { get; set; }
 
-    public string? TestResult { get; set; }
-    public bool TestSuccess { get; set; }
-
     public async Task OnGetAsync()
     {
         var settings = await _notificationService.GetSettingsAsync();
@@ -96,31 +93,26 @@ public class WhatsAppModel : PageModel
         return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnPostTestConnectionAsync()
+    public async Task<IActionResult> OnPostTestConnectionAsync([FromForm] string phoneNumber)
     {
         var settings = await _notificationService.GetSettingsAsync();
-        if (settings == null || string.IsNullOrWhiteSpace(Input.TestPhoneNumber))
+        if (settings == null || string.IsNullOrWhiteSpace(phoneNumber))
         {
-            TestSuccess = false;
-            TestResult = "Please save the settings first and provide a test phone number.";
-            return Page();
+            return new JsonResult(new { success = false, message = "Please provide a test phone number." });
         }
 
         if (string.IsNullOrWhiteSpace(settings.AccessToken) || string.IsNullOrWhiteSpace(settings.PhoneNumberId))
         {
-            TestSuccess = false;
-            TestResult = "Please configure the Access Token and Phone Number ID first.";
-            return Page();
+            return new JsonResult(new { success = false, message = "Please configure the Access Token and Phone Number ID first." });
         }
 
-        var (success, error) = await _whatsAppService.TestConnectionAsync(Input.TestPhoneNumber);
+        var (success, error) = await _whatsAppService.SendTestMessageAsync(phoneNumber);
 
-        TestSuccess = success;
-        TestResult = success
-            ? $"Test message sent successfully to {Input.TestPhoneNumber}!"
+        var message = success
+            ? $"Test message sent successfully to {phoneNumber}!"
             : $"Test message failed: {error}";
 
-        return Page();
+        return new JsonResult(new { success, message });
     }
 
     public class WhatsAppSettingsInput
@@ -140,6 +132,5 @@ public class WhatsAppModel : PageModel
         [Range(-12, 14)]
         public int TimeZoneOffset { get; set; } = -4;
         public bool EnableIncomingBot { get; set; }
-        public string TestPhoneNumber { get; set; } = "";
     }
 }

@@ -14,6 +14,38 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
+        // Resolve WhatsApp encryption key (env var > file > auto-generate in dev)
+        var encryptionKey = builder.Configuration["WhatsApp:EncryptionKey"];
+        var keyPath = Path.Combine(builder.Environment.ContentRootPath, "data", "whatsapp-key.txt");
+        if (string.IsNullOrWhiteSpace(encryptionKey) && File.Exists(keyPath))
+        {
+            encryptionKey = File.ReadAllText(keyPath).Trim();
+        }
+        if (string.IsNullOrWhiteSpace(encryptionKey))
+        {
+            if (builder.Environment.IsDevelopment())
+            {
+                var dataDir = Path.Combine(builder.Environment.ContentRootPath, "data");
+                if (!Directory.Exists(dataDir))
+                {
+                    Directory.CreateDirectory(dataDir);
+                }
+                encryptionKey = EncryptionHelper.GenerateKey();
+                File.WriteAllText(keyPath, encryptionKey);
+                builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["WhatsApp:EncryptionKey"] = encryptionKey
+                });
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    "WhatsApp encryption key is missing. " +
+                    "Set the 'WhatsApp__EncryptionKey' environment variable (or 'WhatsApp:EncryptionKey' in appsettings.json) " +
+                    "or mount a persistent volume with 'data/whatsapp-key.txt'.");
+            }
+        }
+
         // Configure database
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
             ?? "Data Source=data/renttracker.db";

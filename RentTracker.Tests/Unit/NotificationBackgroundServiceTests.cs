@@ -327,7 +327,7 @@ public class NotificationBackgroundServiceTests
         public Task<(bool Success, string? Error)> SendMessageAsync(string phoneNumber, string message)
             => Task.FromResult((true, (string?)null));
 
-        public Task<(bool Success, string? Error)> TestConnectionAsync(string testPhoneNumber)
+        public Task<(bool Success, string? Error)> SendTestMessageAsync(string phoneNumber)
             => Task.FromResult((true, (string?)null));
     }
 }

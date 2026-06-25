@@ -114,9 +114,19 @@
             <h3>API Credentials</h3>
 
             <div class="form-group">
-                <label asp-for="Input.AccessToken"></label>
-                <input asp-for="Input.AccessToken" class="form-control" type="password" autocomplete="new-password" />
-                <span class="field-hint">Enter a new value to update. Leave unchanged to keep current value.</span>
+                <label asp-for="Input.AccessToken">
+                    Access Token
+                    @if (!string.IsNullOrEmpty(Model.Input.AccessToken) && Model.Input.AccessToken == "********")
+                    {
+                        <span class="badge badge-success" style="margin-left: 0.5rem;">Stored</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-warning" style="margin-left: 0.5rem;">Not set</span>
+                    }
+                </label>
+                <input asp-for="Input.AccessToken" class="form-control" type="password" autocomplete="new-password" placeholder="Enter new token to update..." />
+                <span class="field-hint">Token is saved securely. Leave blank to keep current value.</span>
                 <span asp-validation-for="Input.AccessToken" class="text-danger"></span>
             </div>
 
@@ -146,20 +156,15 @@
             <h3>Test Connection</h3>
 
             <div class="form-group">
-                <label asp-for="Input.TestPhoneNumber">Test Phone Number</label>
+                <label>Test Phone Number</label>
                 <div class="input-group">
-                    <input asp-for="Input.TestPhoneNumber" class="form-control" placeholder="+5917XXXXXXX" />
-                    <button type="submit" name="handler" value="TestConnection" class="btn btn-secondary">Send Test Message</button>
+                    <input type="text" id="test-phone-number" class="form-control" placeholder="+59171687570" />
+                    <button type="button" id="test-connection-btn" class="btn btn-secondary">Send Test Message</button>
                 </div>
                 <span class="field-hint">Enter a phone number to receive the test message (include country code)</span>
             </div>
 
-            @if (!string.IsNullOrEmpty(Model.TestResult))
-            {
-                <div class="alert @(Model.TestSuccess ? "alert-success" : "alert-danger")">
-                    @Model.TestResult
-                </div>
-            }
+            <div id="test-result" class="alert" style="display: none;"></div>
         </div>
 
         <div class="form-section">
@@ -262,6 +267,63 @@
                 icon.textContent = '+';
             }
         }
+
+        // Test connection AJAX handler
+        document.addEventListener('DOMContentLoaded', function() {
+            var testBtn = document.getElementById('test-connection-btn');
+            var testPhoneInput = document.getElementById('test-phone-number');
+            var resultDiv = document.getElementById('test-result');
+
+            if (!testBtn) return;
+
+            testBtn.addEventListener('click', function() {
+                var phoneNumber = testPhoneInput.value.trim();
+                if (!phoneNumber) {
+                    showResult('Please enter a test phone number.', false);
+                    return;
+                }
+
+                testBtn.disabled = true;
+                testBtn.textContent = 'Sending...';
+
+                var formData = new FormData();
+                formData.append('phoneNumber', phoneNumber);
+                var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (token) {
+                    formData.append('__RequestVerificationToken', token.value);
+                }
+
+                fetch('?handler=TestConnection', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(function(data) {
+                    showResult(data.message, data.success);
+                })
+                .catch(function(error) {
+                    showResult('Error: ' + error.message, false);
+                })
+                .finally(function() {
+                    testBtn.disabled = false;
+                    testBtn.textContent = 'Send Test Message';
+                });
+            });
+
+            function showResult(message, isSuccess) {
+                resultDiv.textContent = message;
+                resultDiv.className = 'alert ' + (isSuccess ? 'alert-success' : 'alert-danger');
+                resultDiv.style.display = 'block';
+            }
+        });
     </script>
 }
 

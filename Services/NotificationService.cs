@@ -47,11 +47,6 @@ public class NotificationService : INotificationService
         await _context.SaveChangesAsync();
     }
 
-    public async Task<(bool Success, string? Error)> SendTestMessageAsync(string phoneNumber)
-    {
-        return await _whatsAppService.SendMessageAsync(phoneNumber, "This is a test message from RentTracker. If you receive this, WhatsApp notifications are configured correctly.");
-    }
-
     public async Task ProcessPaymentDueSoonNotificationsAsync()
     {
         var settings = await GetSettingsAsync();

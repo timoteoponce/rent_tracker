@@ -551,7 +551,24 @@ Design ready but not implemented. Would allow landlords to mark payments as paid
 
 ### Credential Security
 
-Access tokens are AES-256 encrypted in the database with a random IV per encryption. The encryption key **must** be configured in `appsettings.json` under `WhatsApp:EncryptionKey` before the app can encrypt or decrypt tokens. Generate a key by calling `EncryptionHelper.GenerateKey()` from code or any secure random hex generator (64 characters).
+Access tokens are AES-256 encrypted in the database with a random IV per encryption.
+
+**Key resolution order:**
+1. `WhatsApp:EncryptionKey` environment variable (or `WhatsApp__EncryptionKey` via env vars)
+2. `appsettings.json` under `WhatsApp:EncryptionKey`
+3. `data/whatsapp-key.txt` (from a previous run or mounted volume)
+4. **Development only**: Auto-generate and save to `data/whatsapp-key.txt`
+
+**Production (GitHub Actions / Docker):**
+- Set the `WhatsApp__EncryptionKey` environment variable via a GitHub Secret
+- The CI/CD workflow passes it to the container: `-e WhatsApp__EncryptionKey="${{ secrets.WHATSAPP_ENCRYPTION_KEY }}"`
+- The key is NOT auto-generated in production — the app will fail fast if missing
+
+**Development:**
+- The app auto-generates a key on first startup and saves it to `data/whatsapp-key.txt`
+- You can also generate one manually: `EncryptionHelper.GenerateKey()`
+
+**Note:** `data/whatsapp-key.txt` is excluded from Git and Docker builds (see `.gitignore` and `.dockerignore`).
 
 ### Disabling Notifications for Users Without Phone Numbers
 

@@ -9,7 +9,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      # Persist SQLite database
+      # Persist SQLite database and WhatsApp encryption key
       - ./data:/app/data
       # Optional: Mount custom appsettings
       - ./appsettings.Production.json:/app/appsettings.Production.json:ro

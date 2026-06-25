@@ -9,5 +9,4 @@ public interface INotificationService
     Task ProcessPaymentOverdueNotificationsAsync();
     Task<WhatsAppSettings?> GetSettingsAsync();
     Task SaveSettingsAsync(WhatsAppSettings settings);
-    Task<(bool Success, string? Error)> SendTestMessageAsync(string phoneNumber);
 }
