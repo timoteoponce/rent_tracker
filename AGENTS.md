@@ -542,12 +542,55 @@ The app supports WhatsApp Business API notifications for payment reminders. This
 - Notification type toggles with descriptions
 - Incoming Bot toggle (disabled, "Phase 2")
 
+### Dry-Run Mode
+
+Administrators can run a dry-run from `/Settings/WhatsApp`. The dry-run:
+- Uses the current date and the existing notification toggles.
+- Sends all configured notification templates to a test phone number instead of real tenants/owners.
+- Logs each attempt as `DryRun` in `NotificationLog`.
+- Returns a summary of attempted/succeeded/failed messages per notification type.
+
+The test number can be saved in `WhatsAppSettings.DryRunPhoneNumber` or entered once for a single run.
+
 ### Phase 2: WhatsApp Bot (Incoming Messages)
 
 Design ready but not implemented. Would allow landlords to mark payments as paid via WhatsApp messages:
 - Webhook endpoint: `POST /api/whatsapp/webhook`
 - Command format: `PAGADO <property-code> <month> <year>`
 - Requires Meta Business API configured for incoming messages
+
+## PWA Push Notifications
+
+The app supports Web Push notifications for administrators and owners. This is independent of WhatsApp and works directly in installed PWAs.
+
+### What is sent
+
+- **Upcoming payments** within `WhatsAppSettings.DueSoonDaysBefore` days.
+- **Overdue payments** (daily summary).
+
+### How it works
+
+- `PushSubscription` stores the browser subscription (endpoint, p256dh, auth) per user.
+- `PushNotificationKeyHelper` resolves VAPID keys (`PushNotifications:PublicKey`, `PushNotifications:PrivateKey`, `PushNotifications:Subject`).
+  - In development, keys are auto-generated and saved to `data/push-vapid.txt`.
+  - In production, keys must be provided via environment variables or a mounted file.
+- `IPushNotificationService` / `PushNotificationService` sends notifications using the `WebPush` NuGet package.
+- Service worker (`wwwroot/js/sw.js`) listens for `push` events and shows native notifications.
+- `site.js` prompts admin/owner users to enable notifications and subscribes the device.
+- `NotificationBackgroundService` sends a daily push summary to every subscribed admin/owner.
+
+### Configuration
+
+```bash
+# Production (required)
+PushNotifications__PublicKey=<vapid-public-key>
+PushNotifications__PrivateKey=<vapid-private-key>
+PushNotifications__Subject=mailto:admin@example.com
+```
+
+### Credential Security
+
+`data/push-vapid.txt` is excluded from Git and Docker builds. Treat VAPID private keys as secrets.
 
 ### Credential Security
 

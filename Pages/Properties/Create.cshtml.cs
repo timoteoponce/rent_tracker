@@ -54,10 +54,11 @@ public class CreateModel : PageModel
             return Page();
         }
 
-        // Set the creator as the last editor so they can toggle privacy later
+        // Set the creator as the owner and last editor
         var userId = AuthorizationHelper.GetCurrentUserId(User);
         if (userId.HasValue)
         {
+            Property.OwnerId = userId.Value;
             Property.LastEditedById = userId.Value;
         }
 

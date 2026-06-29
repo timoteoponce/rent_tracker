@@ -116,6 +116,194 @@ public class PropertyTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
+    public async Task CreateProperty_SetsOwnerToCreator()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync(UserRoles.Owner);
+
+        var name = Unique("Owned");
+        var createPage = await client.GetAsync("/Properties/Create");
+        var token = CustomWebApplicationFactory.ExtractAntiForgeryToken(await createPage.Content.ReadAsStringAsync());
+
+        var response = await client.PostAsync("/Properties/Create", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = token,
+            ["Property.Name"] = name,
+            ["Property.Location"] = "Santa Cruz",
+            ["Property.SurfaceSquareMeters"] = "120",
+            ["Property.NumberOfRooms"] = "3",
+            ["Property.CurrentPrice"] = "2500",
+            ["Property.CurrentWarranty"] = "5000",
+            ["Property.HasBathroom"] = "true",
+            ["Property.HasKitchen"] = "true",
+            ["Property.HasGarage"] = "false",
+            ["Property.HasHotWater"] = "true",
+            ["Property.HasAirConditioning"] = "false",
+            ["Property.HasBackyard"] = "false",
+            ["Property.HasSecurity"] = "true",
+            ["Property.HasDoorbell"] = "false",
+            ["Property.CanBeLeasedByUnits"] = "false",
+            ["Property.IsPrivate"] = "false"
+        }));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<RentTrackerDbContext>();
+        var user = db.Users.First(u => u.Username == "test-owner");
+        var property = await db.Properties.FirstOrDefaultAsync(p => p.Name == name);
+
+        Assert.NotNull(property);
+        Assert.Equal(user.Id, property.OwnerId);
+    }
+
+    [Fact]
+    public async Task EditProperty_AdminCanChangeOwner()
+    {
+        var ownerClient = await _factory.CreateAuthenticatedClientAsync(UserRoles.Owner);
+        var adminClient = await _factory.CreateAuthenticatedClientAsync(UserRoles.Administrator);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<RentTrackerDbContext>();
+        await db.Database.EnsureCreatedAsync();
+
+        var ownerUser = db.Users.First(u => u.Username == "test-owner");
+        var adminUser = db.Users.First(u => u.Username == "test-administrator");
+        var otherUser = new User
+        {
+            Id = Guid.NewGuid(),
+            Username = Unique("otherowner"),
+            Email = $"{Unique("otherowner")}@test.ch",
+            FullName = "Other Owner",
+            Role = UserRoles.Owner,
+            PasswordHash = Web.Program.HashPassword("password123"),
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        db.Users.Add(otherUser);
+        await db.SaveChangesAsync();
+
+        var property = new Property
+        {
+            Name = Unique("OwnerChange"),
+            CurrentPrice = 1000m,
+            CurrentWarranty = 2000m,
+            IsEnabled = true,
+            OwnerId = ownerUser.Id,
+            LastEditedById = ownerUser.Id,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        db.Properties.Add(property);
+        await db.SaveChangesAsync();
+
+        var editPage = await adminClient.GetAsync($"/Properties/Edit/{property.Id}");
+        var token = CustomWebApplicationFactory.ExtractAntiForgeryToken(await editPage.Content.ReadAsStringAsync());
+
+        var response = await adminClient.PostAsync($"/Properties/Edit/{property.Id}", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = token,
+            ["Property.Id"] = property.Id.ToString(),
+            ["Property.Name"] = property.Name,
+            ["Property.Location"] = "Santa Cruz",
+            ["Property.CurrentPrice"] = property.CurrentPrice.ToString(),
+            ["Property.CurrentWarranty"] = property.CurrentWarranty.ToString(),
+            ["Property.HasBathroom"] = "false",
+            ["Property.HasKitchen"] = "false",
+            ["Property.HasGarage"] = "false",
+            ["Property.HasHotWater"] = "false",
+            ["Property.HasAirConditioning"] = "false",
+            ["Property.HasBackyard"] = "false",
+            ["Property.HasSecurity"] = "false",
+            ["Property.HasDoorbell"] = "false",
+            ["Property.CanBeLeasedByUnits"] = "false",
+            ["Property.IsPrivate"] = "false",
+            ["Property.OwnerId"] = otherUser.Id.ToString(),
+            ["Property.CreatedAt"] = property.CreatedAt.ToString("O")
+        }));
+
+        if (response.StatusCode != HttpStatusCode.Redirect)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            Assert.Fail($"Expected redirect but got {response.StatusCode}. Content:\n{content}");
+        }
+
+        db.ChangeTracker.Clear();
+        var updated = await db.Properties.FindAsync(property.Id);
+        Assert.NotNull(updated);
+        Assert.Equal(otherUser.Id, updated.OwnerId);
+    }
+
+    [Fact]
+    public async Task EditProperty_NonAdminOwnerCannotChangeOwner()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync(UserRoles.Owner);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<RentTrackerDbContext>();
+        await db.Database.EnsureCreatedAsync();
+
+        var user = db.Users.First(u => u.Username == "test-owner");
+        var otherUser = new User
+        {
+            Id = Guid.NewGuid(),
+            Username = Unique("otherowner"),
+            Email = $"{Unique("otherowner")}@test.ch",
+            FullName = "Other Owner",
+            Role = UserRoles.Owner,
+            PasswordHash = Web.Program.HashPassword("password123"),
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        db.Users.Add(otherUser);
+        await db.SaveChangesAsync();
+
+        var property = new Property
+        {
+            Name = Unique("OwnerLocked"),
+            CurrentPrice = 1000m,
+            CurrentWarranty = 2000m,
+            IsEnabled = true,
+            OwnerId = user.Id,
+            LastEditedById = user.Id,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        db.Properties.Add(property);
+        await db.SaveChangesAsync();
+
+        var editPage = await client.GetAsync($"/Properties/Edit/{property.Id}");
+        var token = CustomWebApplicationFactory.ExtractAntiForgeryToken(await editPage.Content.ReadAsStringAsync());
+
+        // Post with a different owner. The backend should ignore it for non-admins.
+        var response = await client.PostAsync($"/Properties/Edit/{property.Id}", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = token,
+            ["Property.Id"] = property.Id.ToString(),
+            ["Property.Name"] = property.Name,
+            ["Property.Location"] = "Santa Cruz",
+            ["Property.CurrentPrice"] = property.CurrentPrice.ToString(),
+            ["Property.CurrentWarranty"] = property.CurrentWarranty.ToString(),
+            ["Property.HasBathroom"] = "false",
+            ["Property.HasKitchen"] = "false",
+            ["Property.HasGarage"] = "false",
+            ["Property.HasHotWater"] = "false",
+            ["Property.HasAirConditioning"] = "false",
+            ["Property.HasBackyard"] = "false",
+            ["Property.HasSecurity"] = "false",
+            ["Property.HasDoorbell"] = "false",
+            ["Property.CanBeLeasedByUnits"] = "false",
+            ["Property.IsPrivate"] = "false",
+            ["Property.OwnerId"] = otherUser.Id.ToString(),
+            ["Property.CreatedAt"] = property.CreatedAt.ToString("O")
+        }));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+
+        db.ChangeTracker.Clear();
+        var updated = await db.Properties.FindAsync(property.Id);
+        Assert.NotNull(updated);
+        Assert.Equal(user.Id, updated.OwnerId);
+    }
+
+    [Fact]
     public async Task ToggleStatus_DisablesAndEnablesProperty()
     {
         var client = await _factory.CreateAuthenticatedClientAsync(UserRoles.Owner);

@@ -33,6 +33,10 @@
                 </p>
             </div>
             <div class="form-group">
+                <label>Owner</label>
+                <p>@(Model.Property.Owner?.FullName ?? "Not assigned")</p>
+            </div>
+            <div class="form-group">
                 <label>Location</label>
                 <p>
                     @if (!string.IsNullOrEmpty(Model.Property.Location))

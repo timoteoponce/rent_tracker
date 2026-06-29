@@ -12,6 +12,7 @@
         initActiveNav();
         initToasts();
         registerServiceWorker();
+        initPushNotifications();
     });
 
     // Confirm dialogs for destructive actions
@@ -232,6 +233,118 @@
             }
         });
     };
+
+    // Push notification subscription for admin/owner users
+    function initPushNotifications() {
+        var rt = window.RentTracker;
+        if (!rt || !rt.isAdminOrOwner || !rt.pushPublicKey) {
+            return;
+        }
+
+        if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+            return;
+        }
+
+        if (Notification.permission === 'granted') {
+            subscribePushNotifications();
+            return;
+        }
+
+        if (Notification.permission === 'denied') {
+            return;
+        }
+
+        if (localStorage.getItem('push-banner-dismissed') === 'true') {
+            return;
+        }
+
+        showPushEnableBanner();
+    }
+
+    function showPushEnableBanner() {
+        var banner = document.createElement('div');
+        banner.id = 'push-enable-banner';
+        banner.innerHTML =
+            '<span>Enable notifications to get payment reminders on this device.</span>' +
+            '<button id="push-enable-btn">Enable</button>' +
+            '<button id="push-dismiss-btn" class="btn-text">Dismiss</button>';
+        document.body.appendChild(banner);
+
+        document.getElementById('push-enable-btn').addEventListener('click', function() {
+            Notification.requestPermission().then(function(permission) {
+                if (permission === 'granted') {
+                    subscribePushNotifications();
+                }
+            });
+            banner.remove();
+        });
+
+        document.getElementById('push-dismiss-btn').addEventListener('click', function() {
+            localStorage.setItem('push-banner-dismissed', 'true');
+            banner.remove();
+        });
+    }
+
+    window.subscribePushNotifications = function() {
+        navigator.serviceWorker.ready.then(function(registration) {
+            return registration.pushManager.getSubscription().then(function(subscription) {
+                if (subscription) {
+                    sendSubscriptionToServer(subscription);
+                    return;
+                }
+
+                return registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(window.RentTracker.pushPublicKey)
+                }).then(function(newSubscription) {
+                    sendSubscriptionToServer(newSubscription);
+                });
+            });
+        }).catch(function(error) {
+            console.error('Error subscribing to push notifications:', error);
+        });
+    };
+
+    function sendSubscriptionToServer(subscription) {
+        var payload = {
+            endpoint: subscription.endpoint,
+            p256dh: arrayBufferToBase64(subscription.getKey('p256dh')),
+            auth: arrayBufferToBase64(subscription.getKey('auth'))
+        };
+
+        fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).catch(function(error) {
+            console.error('Failed to send push subscription to server:', error);
+        });
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+        var padding = '='.repeat((4 - base64String.length % 4) % 4);
+        var base64 = (base64String + padding)
+            .replace(/\-/g, '+')
+            .replace(/_/g, '/');
+        var rawData = window.atob(base64);
+        var outputArray = new Uint8Array(rawData.length);
+        for (var i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+
+    function arrayBufferToBase64(buffer) {
+        if (!buffer) {
+            return '';
+        }
+        var binary = '';
+        var bytes = new Uint8Array(buffer);
+        for (var i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return window.btoa(binary);
+    }
 
     // Service Worker registration with update banner support
     function registerServiceWorker() {

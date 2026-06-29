@@ -137,6 +137,71 @@ public class NotificationServiceTests
         Assert.Equal(expected, result);
     }
 
+    [Theory]
+    [InlineData(2024, 6, 29, 1, 2024, 7, 1)]   // Before due day -> next month
+    [InlineData(2024, 6, 1, 1, 2024, 6, 1)]     // On due day -> current month
+    [InlineData(2024, 6, 2, 1, 2024, 7, 1)]     // After due day -> next month
+    [InlineData(2024, 6, 29, 31, 2024, 6, 30)] // Due day 31 clamps to 30
+    [InlineData(2024, 2, 28, 31, 2024, 2, 29)] // Feb 29 on leap year
+    [InlineData(2024, 2, 29, 31, 2024, 2, 29)] // On due day -> current period
+    [InlineData(2024, 3, 1, 31, 2024, 3, 31)]  // After due day -> Mar 31
+    public void GetNextDueDate_ReturnsCorrectDueDateAndPeriod(int year, int month, int day, int paymentDueDay, int expectedYear, int expectedMonth, int expectedDay)
+    {
+        var method = typeof(RentTracker.Web.Services.NotificationService).GetMethod(
+            "GetNextDueDate", BindingFlags.Static | BindingFlags.NonPublic);
+
+        Assert.NotNull(method);
+        var today = new DateTimeOffset(year, month, day, 0, 0, 0, TimeSpan.Zero);
+        var result = method.Invoke(null, new object[] { today, paymentDueDay });
+
+        Assert.NotNull(result);
+        var tupleType = typeof(ValueTuple<,>).MakeGenericType(typeof(DateTimeOffset), typeof(DateTimeOffset));
+        var dueDate = (DateTimeOffset)tupleType.GetField("Item1")!.GetValue(result)!;
+        var forPeriod = (DateTimeOffset)tupleType.GetField("Item2")!.GetValue(result)!;
+
+        Assert.Equal(new DateTimeOffset(expectedYear, expectedMonth, expectedDay, 0, 0, 0, TimeSpan.Zero), dueDate);
+        Assert.Equal(new DateTimeOffset(expectedYear, expectedMonth, 1, 0, 0, 0, TimeSpan.Zero), forPeriod);
+    }
+
+    [Fact]
+    public void ProcessDryRunAsync_SendsOnePerEnabledTemplateToTestNumber()
+    {
+        using var context = GetInMemoryContext();
+
+        context.WhatsAppSettings.Add(new WhatsAppSettings
+        {
+            IsEnabled = true,
+            AccessToken = "encrypted-token",
+            PhoneNumberId = "phone-id",
+            EnablePaymentToday = true,
+            EnablePaymentDueSoon = true,
+            EnablePaymentOverdue = true,
+            EnableOverdueToTenant = true,
+            EnableOverdueToLender = true,
+            TimeZoneOffset = -4,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+
+        context.SaveChanges();
+
+        var service = new RentTracker.Web.Services.NotificationService(
+            context,
+            new FakeWhatsAppService());
+
+        var result = service.ProcessDryRunAsync("+59179999999").GetAwaiter().GetResult();
+
+        Assert.True(result.Success);
+        Assert.Equal(4, result.TotalAttempted);
+        Assert.Equal(4, result.TotalSucceeded);
+
+        var logs = context.NotificationLogs
+            .Where(n => n.Type == NotificationType.DryRun)
+            .ToList();
+
+        Assert.Equal(4, logs.Count);
+        Assert.All(logs, log => Assert.Equal("+59179999999", log.RecipientPhoneNumber));
+    }
+
     private class FakeWhatsAppService : RentTracker.Web.Services.IWhatsAppService
     {
         public Task<(bool Success, string? Error)> SendMessageAsync(string phoneNumber, string message)

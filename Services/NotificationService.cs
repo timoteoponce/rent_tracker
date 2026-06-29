@@ -46,6 +46,9 @@ public class NotificationService : INotificationService
             existing.PaymentDueSoonTemplateName = settings.PaymentDueSoonTemplateName;
             existing.PaymentTodayTemplateName = settings.PaymentTodayTemplateName;
             existing.PaymentOverdueTemplateName = settings.PaymentOverdueTemplateName;
+            existing.OverdueSummaryTemplateName = settings.OverdueSummaryTemplateName;
+            existing.TemplateLanguage = settings.TemplateLanguage;
+            existing.DryRunPhoneNumber = settings.DryRunPhoneNumber;
             existing.EnableIncomingBot = settings.EnableIncomingBot;
             existing.UpdatedAt = DateTimeOffset.UtcNow;
         }
@@ -59,7 +62,7 @@ public class NotificationService : INotificationService
             return;
 
         var today = DateTimeOffset.UtcNow;
-        var currentPeriod = new DateTimeOffset(today.Year, today.Month, 1, 0, 0, 0, TimeSpan.Zero);
+        var todayDate = new DateTimeOffset(today.Year, today.Month, today.Day, 0, 0, 0, TimeSpan.Zero);
 
         var allLeases = await _context.Leases
             .Include(l => l.Property).ThenInclude(p => p!.Owner)
@@ -69,26 +72,25 @@ public class NotificationService : INotificationService
 
         foreach (var lease in allLeases)
         {
-            var dueDay = ClampDayToMonth(currentPeriod.Year, currentPeriod.Month, lease.PaymentDueDay);
-            var dueDate = new DateTimeOffset(currentPeriod.Year, currentPeriod.Month, dueDay, 0, 0, 0, TimeSpan.Zero);
+            var (dueDate, forPeriod) = GetNextDueDate(today, lease.PaymentDueDay);
             var targetDate = dueDate.AddDays(-settings.DueSoonDaysBefore);
 
-            if (targetDate.Date != today.Date)
+            if (targetDate != todayDate)
                 continue;
 
             if (string.IsNullOrEmpty(lease.Tenant.PhoneNumber))
             {
-                await LogSkippedNotification(NotificationType.PaymentDueSoon, lease.Id, currentPeriod, "Tenant", lease.TenantId, "No phone number");
+                await LogSkippedNotification(NotificationType.PaymentDueSoon, lease.Id, forPeriod, "Tenant", lease.TenantId, "No phone number");
                 continue;
             }
 
-            if (await HasReceivedPaymentForPeriodAsync(lease.Id, currentPeriod))
+            if (await HasReceivedPaymentForPeriodAsync(lease.Id, forPeriod))
                 continue;
 
-            if (await HasTodayNotificationAsync(NotificationType.PaymentDueSoon, lease.Id, currentPeriod))
+            if (await HasTodayNotificationAsync(NotificationType.PaymentDueSoon, lease.Id, forPeriod))
                 continue;
 
-            var daysUntilDue = (dueDate.Date - today.Date).Days;
+            var daysUntilDue = (dueDate - todayDate).Days;
             var propertyName = lease.Property?.Name ?? "the property";
             var parameters = new List<string>
             {
@@ -100,7 +102,7 @@ public class NotificationService : INotificationService
 
             var (success, error) = await _whatsAppService.SendTemplateAsync(lease.Tenant.PhoneNumber, settings.PaymentDueSoonTemplateName, parameters);
             var message = $"Template: {settings.PaymentDueSoonTemplateName}, Params: {string.Join(", ", parameters)}";
-            await LogNotification(NotificationType.PaymentDueSoon, lease.Id, currentPeriod, "Tenant", lease.TenantId,
+            await LogNotification(NotificationType.PaymentDueSoon, lease.Id, forPeriod, "Tenant", lease.TenantId,
                 lease.Tenant.PhoneNumber, message, success ? NotificationLogStatus.Sent : NotificationLogStatus.Failed, error);
         }
     }
@@ -112,7 +114,7 @@ public class NotificationService : INotificationService
             return;
 
         var today = DateTimeOffset.UtcNow;
-        var currentPeriod = new DateTimeOffset(today.Year, today.Month, 1, 0, 0, 0, TimeSpan.Zero);
+        var todayDate = new DateTimeOffset(today.Year, today.Month, today.Day, 0, 0, 0, TimeSpan.Zero);
 
         var allLeases = await _context.Leases
             .Include(l => l.Property).ThenInclude(p => p!.Owner)
@@ -122,23 +124,22 @@ public class NotificationService : INotificationService
 
         foreach (var lease in allLeases)
         {
-            var dueDay = ClampDayToMonth(currentPeriod.Year, currentPeriod.Month, lease.PaymentDueDay);
-            if (dueDay != today.Day)
+            var (dueDate, forPeriod) = GetNextDueDate(today, lease.PaymentDueDay);
+            if (dueDate != todayDate)
                 continue;
 
             if (string.IsNullOrEmpty(lease.Tenant.PhoneNumber))
             {
-                await LogSkippedNotification(NotificationType.PaymentToday, lease.Id, currentPeriod, "Tenant", lease.TenantId, "No phone number");
+                await LogSkippedNotification(NotificationType.PaymentToday, lease.Id, forPeriod, "Tenant", lease.TenantId, "No phone number");
                 continue;
             }
 
-            if (await HasReceivedPaymentForPeriodAsync(lease.Id, currentPeriod))
+            if (await HasReceivedPaymentForPeriodAsync(lease.Id, forPeriod))
                 continue;
 
-            if (await HasTodayNotificationAsync(NotificationType.PaymentToday, lease.Id, currentPeriod))
+            if (await HasTodayNotificationAsync(NotificationType.PaymentToday, lease.Id, forPeriod))
                 continue;
 
-            var dueDate = new DateTimeOffset(currentPeriod.Year, currentPeriod.Month, dueDay, 0, 0, 0, TimeSpan.Zero);
             var propertyName = lease.Property?.Name ?? "the property";
             var parameters = new List<string>
             {
@@ -149,7 +150,7 @@ public class NotificationService : INotificationService
 
             var (success, error) = await _whatsAppService.SendTemplateAsync(lease.Tenant.PhoneNumber, settings.PaymentTodayTemplateName, parameters);
             var message = $"Template: {settings.PaymentTodayTemplateName}, Params: {string.Join(", ", parameters)}";
-            await LogNotification(NotificationType.PaymentToday, lease.Id, currentPeriod, "Tenant", lease.TenantId,
+            await LogNotification(NotificationType.PaymentToday, lease.Id, forPeriod, "Tenant", lease.TenantId,
                 lease.Tenant.PhoneNumber, message, success ? NotificationLogStatus.Sent : NotificationLogStatus.Failed, error);
         }
     }
@@ -183,7 +184,7 @@ public class NotificationService : INotificationService
             {
                 var dueDay = ClampDayToMonth(month.Year, month.Month, lease.PaymentDueDay);
                 var dueDate = new DateTimeOffset(month.Year, month.Month, dueDay, 0, 0, 0, TimeSpan.Zero);
-                
+
                 if (dueDate >= today.Date)
                 {
                     // Due date is in the future, skip this month
@@ -275,10 +276,140 @@ public class NotificationService : INotificationService
         }
     }
 
+    public async Task<NotificationDryRunResult> ProcessDryRunAsync(string testPhoneNumber)
+    {
+        var result = new NotificationDryRunResult();
+        var settings = await GetSettingsAsync();
+
+        if (settings == null)
+        {
+            result.Message = "WhatsApp settings not found.";
+            return result;
+        }
+
+        if (string.IsNullOrWhiteSpace(settings.AccessToken) || string.IsNullOrWhiteSpace(settings.PhoneNumberId))
+        {
+            result.Message = "Please configure the Access Token and Phone Number ID first.";
+            return result;
+        }
+
+        if (string.IsNullOrWhiteSpace(testPhoneNumber))
+        {
+            result.Message = "Please provide a test phone number.";
+            return result;
+        }
+
+        // Dry-run uses made-up data so admins can verify every enabled template
+        // regardless of whether any real lease would actually trigger a notification today.
+        var sampleDueDate = new DateTimeOffset(2026, 7, 1, 0, 0, 0, TimeSpan.Zero);
+        var samplePeriod = new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero);
+        var sampleAmount = "1500";
+        var sampleProperty = "Sample Property";
+        var sampleTenantName = "Juan Perez";
+        var sampleDaysUntilDue = "3";
+        var sampleDaysOverdue = "15";
+        var sampleOverdueCount = "2";
+        var sampleOverdueList = string.Format("{0} owes {1} BOB for {2} ({3:MMM yyyy})",
+            sampleTenantName, sampleAmount, sampleProperty, samplePeriod);
+
+        var today = DateTimeOffset.UtcNow;
+
+        if (settings.EnablePaymentDueSoon)
+        {
+            var typeResult = new NotificationDryRunTypeResult { Type = NotificationType.PaymentDueSoon };
+            var parameters = new List<string>
+            {
+                sampleAmount,
+                sampleProperty,
+                sampleDaysUntilDue,
+                sampleDueDate.ToString("dd MMM yyyy")
+            };
+
+            await SendDryRunNotificationAsync(testPhoneNumber, settings.PaymentDueSoonTemplateName, parameters,
+                NotificationType.PaymentDueSoon, null, samplePeriod, "Tenant", null, null, typeResult);
+            result.Types.Add(typeResult);
+        }
+
+        if (settings.EnablePaymentToday)
+        {
+            var typeResult = new NotificationDryRunTypeResult { Type = NotificationType.PaymentToday };
+            var parameters = new List<string>
+            {
+                sampleAmount,
+                sampleProperty,
+                sampleDueDate.ToString("dd MMM yyyy")
+            };
+
+            await SendDryRunNotificationAsync(testPhoneNumber, settings.PaymentTodayTemplateName, parameters,
+                NotificationType.PaymentToday, null, samplePeriod, "Tenant", null, null, typeResult);
+            result.Types.Add(typeResult);
+        }
+
+        if (settings.EnablePaymentOverdue && settings.EnableOverdueToTenant)
+        {
+            var typeResult = new NotificationDryRunTypeResult { Type = NotificationType.PaymentOverdue };
+            var parameters = new List<string>
+            {
+                sampleAmount,
+                sampleProperty,
+                sampleDueDate.ToString("dd MMM yyyy"),
+                sampleDaysOverdue
+            };
+
+            await SendDryRunNotificationAsync(testPhoneNumber, settings.PaymentOverdueTemplateName, parameters,
+                NotificationType.PaymentOverdue, null, samplePeriod, "Tenant", null, null, typeResult);
+            result.Types.Add(typeResult);
+        }
+
+        if (settings.EnablePaymentOverdue && settings.EnableOverdueToLender)
+        {
+            var typeResult = new NotificationDryRunTypeResult { Type = NotificationType.OverdueSummary };
+            var parameters = new List<string>
+            {
+                today.ToString("dd MMM yyyy"),
+                sampleOverdueCount,
+                sampleOverdueList
+            };
+
+            await SendDryRunNotificationAsync(testPhoneNumber, settings.OverdueSummaryTemplateName, parameters,
+                NotificationType.OverdueSummary, null, samplePeriod, "Owner", null, null, typeResult);
+            result.Types.Add(typeResult);
+        }
+
+        result.TotalAttempted = result.Types.Sum(t => t.Attempted);
+        result.TotalSucceeded = result.Types.Sum(t => t.Succeeded);
+        result.TotalFailed = result.Types.Sum(t => t.Failed);
+        result.Success = result.TotalAttempted > 0 && result.TotalFailed == 0;
+        result.Message = $"Dry run complete. {result.TotalSucceeded} of {result.TotalAttempted} messages sent successfully.";
+        return result;
+    }
+
     private static int ClampDayToMonth(int year, int month, int day)
     {
         var daysInMonth = DateTime.DaysInMonth(year, month);
         return Math.Min(day, daysInMonth);
+    }
+
+    /// <summary>
+    /// Calculates the next upcoming due date and the period it covers based on today's date.
+    /// If the due day for the current month has already passed (or is today), returns the next month's due date.
+    /// </summary>
+    private static (DateTimeOffset DueDate, DateTimeOffset ForPeriod) GetNextDueDate(DateTimeOffset today, int paymentDueDay)
+    {
+        var todayDate = new DateTimeOffset(today.Year, today.Month, today.Day, 0, 0, 0, TimeSpan.Zero);
+        var currentMonth = new DateTimeOffset(today.Year, today.Month, 1, 0, 0, 0, TimeSpan.Zero);
+        var currentDueDay = ClampDayToMonth(currentMonth.Year, currentMonth.Month, paymentDueDay);
+        var currentDueDate = new DateTimeOffset(currentMonth.Year, currentMonth.Month, currentDueDay, 0, 0, 0, TimeSpan.Zero);
+
+        if (currentDueDate >= todayDate)
+        {
+            return (currentDueDate, currentMonth);
+        }
+
+        var nextMonth = currentMonth.AddMonths(1);
+        var nextDueDay = ClampDayToMonth(nextMonth.Year, nextMonth.Month, paymentDueDay);
+        var nextDueDate = new DateTimeOffset(nextMonth.Year, nextMonth.Month, nextDueDay, 0, 0, 0, TimeSpan.Zero);
+        return (nextDueDate, nextMonth);
     }
 
     private async Task<bool> HasReceivedPaymentForPeriodAsync(Guid leaseId, DateTimeOffset forPeriod)
@@ -319,6 +450,53 @@ public class NotificationService : INotificationService
             n.SentAt.Date == todayDate);
     }
 
+    private async Task<bool> HasTodayDryRunNotificationAsync(string type, Guid? leaseId, DateTimeOffset forPeriod, Guid? recipientUserId)
+    {
+        var todayDate = DateTimeOffset.UtcNow.Date;
+        var query = _context.NotificationLogs
+            .Where(n => n.Type == NotificationType.DryRun &&
+                        n.RecipientUserId == recipientUserId);
+
+        if (leaseId.HasValue)
+        {
+            query = query.Where(n => n.LeaseId == leaseId.Value);
+        }
+        else
+        {
+            query = query.Where(n => n.LeaseId == null);
+        }
+
+        var candidates = await query.ToListAsync();
+
+        return candidates.Any(n =>
+            n.ForPeriod.Year == forPeriod.Year &&
+            n.ForPeriod.Month == forPeriod.Month &&
+            n.SentAt.Date == todayDate);
+    }
+
+    private async Task SendDryRunNotificationAsync(string testPhoneNumber, string templateName, List<string> parameters,
+        string type, Guid? leaseId, DateTimeOffset forPeriod, string recipientRole, Guid? recipientUserId,
+        string? originalPhoneNumber, NotificationDryRunTypeResult typeResult)
+    {
+        var (success, error) = await _whatsAppService.SendTemplateAsync(testPhoneNumber, templateName, parameters);
+        var message = $"Dry run ({type}) to {testPhoneNumber}. Template: {templateName}, Original recipient: {recipientRole} ({originalPhoneNumber ?? "no phone"}), Params: {string.Join(", ", parameters)}";
+        await LogNotification(NotificationType.DryRun, leaseId, forPeriod, recipientRole, recipientUserId,
+            testPhoneNumber, message, success ? NotificationLogStatus.Sent : NotificationLogStatus.Failed, error);
+
+        typeResult.Attempted++;
+        if (success)
+        {
+            typeResult.Succeeded++;
+        }
+        else
+        {
+            typeResult.Failed++;
+            typeResult.Error = string.IsNullOrEmpty(typeResult.Error)
+                ? error
+                : $"{typeResult.Error}; {error}";
+        }
+    }
+
     private async Task LogSkippedNotification(string type, Guid leaseId, DateTimeOffset forPeriod, string recipientRole, Guid recipientUserId, string reason)
     {
         var log = new NotificationLog
@@ -340,7 +518,7 @@ public class NotificationService : INotificationService
     }
 
     private async Task LogNotification(string type, Guid? leaseId, DateTimeOffset forPeriod, string recipientRole,
-        Guid recipientUserId, string? phoneNumber, string message, string status, string? error)
+        Guid? recipientUserId, string? phoneNumber, string message, string status, string? error)
     {
         var log = new NotificationLog
         {

@@ -17,7 +17,7 @@ public class NotificationLog
     [StringLength(50)]
     public string RecipientRole { get; set; } = string.Empty;
 
-    public Guid RecipientUserId { get; set; }
+    public Guid? RecipientUserId { get; set; }
 
     [StringLength(20)]
     public string? RecipientPhoneNumber { get; set; }
@@ -35,7 +35,7 @@ public class NotificationLog
 
     public Lease? Lease { get; set; }
 
-    public User RecipientUser { get; set; } = null!;
+    public User? RecipientUser { get; set; }
 }
 
 public static class NotificationLogStatus
@@ -51,4 +51,5 @@ public static class NotificationType
     public const string PaymentOverdue = "PaymentOverdue";
     public const string OverdueSummary = "OverdueSummary";
     public const string TestMessage = "TestMessage";
+    public const string DryRun = "DryRun";
 }

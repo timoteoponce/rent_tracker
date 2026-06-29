@@ -17,6 +17,10 @@ public class WhatsAppSettings
     [StringLength(100)]
     public string? PhoneNumberId { get; set; }
 
+    [StringLength(20)]
+    [Phone]
+    public string? DryRunPhoneNumber { get; set; }
+
     [StringLength(100)]
     public string? BusinessAccountId { get; set; }
 

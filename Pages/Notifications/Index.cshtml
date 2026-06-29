@@ -1,0 +1,98 @@
+@page
+@model RentTracker.Web.Pages.Notifications.IndexModel
+@{
+    ViewData["Title"] = "Notifications";
+}
+
+<partial name="_PageHeader" model='new PageHeaderModel { Title = "Notifications" }' />
+
+<div class="page-content">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Overdue Payments</h3>
+        </div>
+        @if (Model.Overdue.Any())
+        {
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Property</th>
+                            <th>Tenant</th>
+                            <th>Period</th>
+                            <th>Amount</th>
+                            <th>Due Date</th>
+                            <th>Days Overdue</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Overdue)
+                        {
+                            <tr>
+                                <td>@item.PropertyName</td>
+                                <td>@item.TenantName</td>
+                                <td>@item.ForPeriod.ToString("MMM yyyy")</td>
+                                <td>Bs. @item.Amount.ToString("N2")</td>
+                                <td>@item.DueDate.ToString("dd MMM yyyy")</td>
+                                <td>@item.Days</td>
+                                <td>
+                                    <a asp-page="/Payments/Create" asp-route-leaseId="@item.LeaseId" class="btn btn-sm btn-primary">Add Payment</a>
+                                    <a asp-page="/Leases/Details" asp-route-id="@item.LeaseId" class="btn btn-sm btn-secondary">View Lease</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <partial name="_EmptyState" model='new EmptyStateModel { Message = "No overdue payments." }' />
+        }
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Upcoming Payments</h3>
+        </div>
+        @if (Model.Upcoming.Any())
+        {
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Property</th>
+                            <th>Tenant</th>
+                            <th>Period</th>
+                            <th>Amount</th>
+                            <th>Due Date</th>
+                            <th>Days Until Due</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Upcoming)
+                        {
+                            <tr>
+                                <td>@item.PropertyName</td>
+                                <td>@item.TenantName</td>
+                                <td>@item.ForPeriod.ToString("MMM yyyy")</td>
+                                <td>Bs. @item.Amount.ToString("N2")</td>
+                                <td>@item.DueDate.ToString("dd MMM yyyy")</td>
+                                <td>@item.Days</td>
+                                <td>
+                                    <a asp-page="/Leases/Details" asp-route-id="@item.LeaseId" class="btn btn-sm btn-secondary">View Lease</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <partial name="_EmptyState" model='new EmptyStateModel { Message = "No upcoming payments." }' />
+        }
+    </div>
+</div>

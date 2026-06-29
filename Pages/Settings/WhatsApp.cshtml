@@ -168,6 +168,23 @@
         </div>
 
         <div class="form-section">
+            <h3>Dry Run</h3>
+            <span class="field-hint">Simulate today's notification run and send all configured messages to a test number instead of real tenants/owners.</span>
+
+            <div class="form-group">
+                <label asp-for="Input.DryRunPhoneNumber"></label>
+                <div class="input-group">
+                    <input asp-for="Input.DryRunPhoneNumber" class="form-control" placeholder="+59171687570" />
+                    <button type="button" id="dry-run-btn" class="btn btn-secondary">Run Dry Run</button>
+                </div>
+                <span class="field-hint">Saved dry-run number. You can override it for a single run.</span>
+                <span asp-validation-for="Input.DryRunPhoneNumber" class="text-danger"></span>
+            </div>
+
+            <div id="dry-run-result" class="alert" style="display: none;"></div>
+        </div>
+
+        <div class="form-section">
             <h3>Notification Types</h3>
 
             <div class="form-group">
@@ -315,54 +332,107 @@
             var testPhoneInput = document.getElementById('test-phone-number');
             var resultDiv = document.getElementById('test-result');
 
-            if (!testBtn) return;
-
-            testBtn.addEventListener('click', function() {
-                var phoneNumber = testPhoneInput.value.trim();
-                if (!phoneNumber) {
-                    showResult('Please enter a test phone number.', false);
-                    return;
-                }
-
-                testBtn.disabled = true;
-                testBtn.textContent = 'Sending...';
-
-                var formData = new FormData();
-                formData.append('phoneNumber', phoneNumber);
-                var token = document.querySelector('input[name="__RequestVerificationToken"]');
-                if (token) {
-                    formData.append('__RequestVerificationToken', token.value);
-                }
-
-                fetch('?handler=TestConnection', {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
+            if (testBtn) {
+                testBtn.addEventListener('click', function() {
+                    var phoneNumber = testPhoneInput.value.trim();
+                    if (!phoneNumber) {
+                        showResult(resultDiv, 'Please enter a test phone number.', false);
+                        return;
                     }
-                })
-                .then(function(response) {
-                    if (!response.ok) {
-                        throw new Error('HTTP ' + response.status);
+
+                    testBtn.disabled = true;
+                    testBtn.textContent = 'Sending...';
+
+                    var formData = new FormData();
+                    formData.append('phoneNumber', phoneNumber);
+                    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                    if (token) {
+                        formData.append('__RequestVerificationToken', token.value);
                     }
-                    return response.json();
-                })
-                .then(function(data) {
-                    showResult(data.message, data.success);
-                })
-                .catch(function(error) {
-                    showResult('Error: ' + error.message, false);
-                })
-                .finally(function() {
-                    testBtn.disabled = false;
-                    testBtn.textContent = 'Send Test Message';
+
+                    fetch('?handler=TestConnection', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(function(response) {
+                        if (!response.ok) {
+                            throw new Error('HTTP ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(function(data) {
+                        showResult(resultDiv, data.message, data.success);
+                    })
+                    .catch(function(error) {
+                        showResult(resultDiv, 'Error: ' + error.message, false);
+                    })
+                    .finally(function() {
+                        testBtn.disabled = false;
+                        testBtn.textContent = 'Send Test Message';
+                    });
                 });
-            });
+            }
 
-            function showResult(message, isSuccess) {
-                resultDiv.textContent = message;
-                resultDiv.className = 'alert ' + (isSuccess ? 'alert-success' : 'alert-danger');
-                resultDiv.style.display = 'block';
+            // Dry-run AJAX handler
+            var dryRunBtn = document.getElementById('dry-run-btn');
+            var dryRunPhoneInput = document.getElementById('Input_DryRunPhoneNumber');
+            var dryRunResultDiv = document.getElementById('dry-run-result');
+
+            if (dryRunBtn) {
+                dryRunBtn.addEventListener('click', function() {
+                    var phoneNumber = dryRunPhoneInput.value.trim();
+                    if (!phoneNumber) {
+                        showResult(dryRunResultDiv, 'Please enter a dry-run phone number.', false);
+                        return;
+                    }
+
+                    dryRunBtn.disabled = true;
+                    dryRunBtn.textContent = 'Running...';
+
+                    var formData = new FormData();
+                    formData.append('testPhoneNumber', phoneNumber);
+                    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                    if (token) {
+                        formData.append('__RequestVerificationToken', token.value);
+                    }
+
+                    fetch('?handler=RunDryRun', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(function(response) {
+                        if (!response.ok) {
+                            throw new Error('HTTP ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(function(data) {
+                        var details = data.types ? data.types.map(function(t) {
+                            return t.type + ': ' + t.succeeded + '/' + t.attempted + (t.error ? ' (' + t.error + ')' : '');
+                        }).join('\n') : '';
+                        showResult(dryRunResultDiv, data.message + (details ? '\n' + details : ''), data.success);
+                    })
+                    .catch(function(error) {
+                        showResult(dryRunResultDiv, 'Error: ' + error.message, false);
+                    })
+                    .finally(function() {
+                        dryRunBtn.disabled = false;
+                        dryRunBtn.textContent = 'Run Dry Run';
+                    });
+                });
+            }
+
+            function showResult(element, message, isSuccess) {
+                element.textContent = message;
+                element.className = 'alert ' + (isSuccess ? 'alert-success' : 'alert-danger');
+                element.style.display = 'block';
+                element.style.whiteSpace = 'pre-line';
             }
         });
     </script>

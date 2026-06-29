@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
 using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
 using RentTracker.Web.Services;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace RentTracker.Web;
 
@@ -97,6 +99,11 @@ public class Program
         builder.Services.AddScoped<IWhatsAppService, MetaCloudWhatsAppService>();
         builder.Services.AddScoped<INotificationService, NotificationService>();
 
+        // Register push notification services
+        builder.Services.AddSingleton(PushNotificationKeyHelper.ResolveKeys(builder.Configuration, builder.Environment));
+        builder.Services.AddScoped<IPaymentReminderService, PaymentReminderService>();
+        builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
+
         // Register background service for periodic notification checks
         builder.Services.AddHostedService<NotificationBackgroundService>();
 
@@ -144,7 +151,48 @@ public class Program
         
         app.MapRazorPages();
 
+        // Push notification API endpoints (admin/owner only)
+        MapPushNotificationEndpoints(app);
+
         await app.RunAsync();
+    }
+
+    private static void MapPushNotificationEndpoints(WebApplication app)
+    {
+        app.MapGet("/api/push/publickey", (IPushNotificationService pushService) =>
+        {
+            return Results.Ok(new { publicKey = pushService.GetPublicKey() });
+        });
+
+        app.MapPost("/api/push/subscribe", async (
+            HttpContext context,
+            IPushNotificationService pushService,
+            PushSubscriptionDto subscription) =>
+        {
+            var userId = AuthorizationHelper.GetCurrentUserId(context.User);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
+            var success = await pushService.SubscribeAsync(userId.Value, subscription);
+            return success ? Results.Ok(new { success = true }) : Results.BadRequest(new { success = false, message = "Invalid subscription" });
+        }).RequireAuthorization(new AuthorizeAttribute { Roles = "Administrator,Owner" });
+
+        app.MapPost("/api/push/unsubscribe", async (
+            HttpContext context,
+            IPushNotificationService pushService,
+            PushSubscriptionDto subscription) =>
+        {
+            var userId = AuthorizationHelper.GetCurrentUserId(context.User);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
+            await pushService.UnsubscribeAsync(userId.Value, subscription.Endpoint);
+            return Results.Ok(new { success = true });
+        }).RequireAuthorization(new AuthorizeAttribute { Roles = "Administrator,Owner" });
     }
 
     private static async Task SeedDefaultAdminAsync(RentTrackerDbContext context)

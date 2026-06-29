@@ -34,7 +34,7 @@ public class IndexModel : PageModel
 
         var query = _context.Leases
             .AsNoTracking()
-            .Include(l => l.Property)
+            .Include(l => l.Property).ThenInclude(p => p!.Owner)
             .Include(l => l.PropertyUnit)
             .Include(l => l.Tenant)
             .AsQueryable();
