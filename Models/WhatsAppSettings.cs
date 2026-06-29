@@ -54,6 +54,9 @@ public class WhatsAppSettings
     [StringLength(100)]
     public string OverdueSummaryTemplateName { get; set; } = "renttracker_overdue_summary";
 
+    [StringLength(10)]
+    public string TemplateLanguage { get; set; } = "en";
+
     public bool EnableIncomingBot { get; set; } = false;
 
     public DateTimeOffset? LastNotificationRunDate { get; set; }
