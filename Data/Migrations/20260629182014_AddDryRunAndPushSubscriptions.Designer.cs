@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RentTracker.Web.Data;
 
@@ -10,9 +11,11 @@ using RentTracker.Web.Data;
 namespace RentTracker.Web.Data.Migrations
 {
     [DbContext(typeof(RentTrackerDbContext))]
-    partial class RentTrackerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260629182014_AddDryRunAndPushSubscriptions")]
+    partial class AddDryRunAndPushSubscriptions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -107,7 +110,7 @@ namespace RentTracker.Web.Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("RecipientUserId")
+                    b.Property<Guid>("RecipientUserId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset>("SentAt")
@@ -575,7 +578,8 @@ namespace RentTracker.Web.Data.Migrations
                     b.HasOne("RentTracker.Web.Models.User", "RecipientUser")
                         .WithMany()
                         .HasForeignKey("RecipientUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Lease");
 

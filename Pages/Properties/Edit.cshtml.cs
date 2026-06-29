@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
 using RentTracker.Web.Helpers;
@@ -29,15 +30,23 @@ public class EditModel : PageModel
     public bool OriginalCanBeLeasedByUnits { get; set; }
     public List<Guid> LockedUnitIds { get; set; } = new();
 
+    public SelectList Owners { get; set; } = new(Enumerable.Empty<object>());
+
     /// <summary>
     /// Whether the current user is allowed to see and toggle the IsPrivate checkbox.
     /// </summary>
     public bool CanTogglePrivacyFlag { get; set; }
 
+    /// <summary>
+    /// Only administrators can change the property owner.
+    /// </summary>
+    public bool CanChangeOwner { get; set; }
+
     public async Task<IActionResult> OnGetAsync(Guid id)
     {
         Property = await _context.Properties
             .Include(p => p.Units)
+            .Include(p => p.Owner)
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (Property == null)
@@ -54,6 +63,12 @@ public class EditModel : PageModel
         }
 
         CanTogglePrivacyFlag = AuthorizationHelper.CanTogglePrivacy(Property, userId, isAdmin);
+        CanChangeOwner = isAdmin;
+
+        if (CanChangeOwner)
+        {
+            await LoadOwnersSelectListAsync(Property.OwnerId);
+        }
 
         OriginalPrice = Property.CurrentPrice;
         OriginalWarranty = Property.CurrentWarranty;
@@ -109,6 +124,9 @@ public class EditModel : PageModel
             ModelState.Remove(key);
         }
 
+        var userId = AuthorizationHelper.GetCurrentUserId(User);
+        var isAdmin = User.IsInRole(UserRoles.Administrator);
+
         // Load the tracked entity directly for model binding
         var propertyToUpdate = await _context.Properties
             .Include(p => p.Units)
@@ -119,16 +137,26 @@ public class EditModel : PageModel
             return NotFound();
         }
 
+        var originalOwnerId = propertyToUpdate.OwnerId;
+
         // Bind form values directly to the tracked entity (prevents silent data loss when new properties are added)
         if (!await TryUpdateModelAsync(propertyToUpdate, "Property"))
         {
             Property = propertyToUpdate;
+            CanChangeOwner = isAdmin;
+            if (CanChangeOwner)
+            {
+                await LoadOwnersSelectListAsync(propertyToUpdate.OwnerId);
+            }
             await ReloadLockedUnitIds(propertyToUpdate.Units);
             return Page();
         }
 
-        var userId = AuthorizationHelper.GetCurrentUserId(User);
-        var isAdmin = User.IsInRole(UserRoles.Administrator);
+        // Only administrators may change the owner; otherwise keep the original value
+        if (!isAdmin)
+        {
+            propertyToUpdate.OwnerId = originalOwnerId;
+        }
 
         if (!AuthorizationHelper.CanEditProperty(propertyToUpdate, userId, isAdmin))
         {
@@ -267,6 +295,18 @@ public class EditModel : PageModel
                 LockedUnitIds.Add(unit.Id);
             }
         }
+    }
+
+    private async Task LoadOwnersSelectListAsync(Guid? selectedOwnerId)
+    {
+        // Active owners, plus the current owner in case their role changed
+        var owners = await _context.Users
+            .Where(u => u.IsActive && (u.Role == UserRoles.Owner || u.Id == selectedOwnerId))
+            .OrderBy(u => u.FullName)
+            .ThenBy(u => u.Username)
+            .ToListAsync();
+
+        Owners = new SelectList(owners, "Id", "FullName", selectedOwnerId);
     }
 
     public class UnitInput

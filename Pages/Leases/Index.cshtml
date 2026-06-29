@@ -32,6 +32,7 @@
                 <thead>
                     <tr>
                         <th>Property</th>
+                        <th>Owner</th>
                         <th>Unit</th>
                         <th>Tenant</th>
                         <th>Start Date</th>
@@ -46,6 +47,7 @@
                     {
                         <tr>
                             <td>@(lease.Property?.Name ?? "Unknown Property")</td>
+                            <td>@(lease.Property?.Owner?.FullName ?? "Not assigned")</td>
                             <td>@(lease.PropertyUnit?.Name ?? "Whole Property")</td>
                             <td>@(lease.Tenant?.FullName ?? "Unknown Tenant")</td>
                             <td>@lease.StartDate.ToString("dd MMM yyyy")</td>

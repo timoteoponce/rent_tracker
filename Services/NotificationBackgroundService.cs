@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
+using RentTracker.Web.Models;
 
 namespace RentTracker.Web.Services;
 
@@ -52,6 +53,8 @@ public class NotificationBackgroundService : BackgroundService
                     await notificationService.ProcessPaymentTodayNotificationsAsync();
                     await notificationService.ProcessPaymentOverdueNotificationsAsync();
 
+                    await SendAdminOwnerPushNotificationsAsync(scope, stoppingToken);
+
                     if (settings != null)
                     {
                         settings.LastNotificationRunDate = DateTimeOffset.UtcNow;
@@ -70,5 +73,43 @@ public class NotificationBackgroundService : BackgroundService
         }
 
         _logger.LogInformation("NotificationBackgroundService stopping");
+    }
+
+    private async Task SendAdminOwnerPushNotificationsAsync(IServiceScope scope, CancellationToken stoppingToken)
+    {
+        try
+        {
+            var reminderService = scope.ServiceProvider.GetRequiredService<IPaymentReminderService>();
+            var pushService = scope.ServiceProvider.GetRequiredService<IPushNotificationService>();
+            var context = scope.ServiceProvider.GetRequiredService<RentTrackerDbContext>();
+
+            var adminOwners = await context.Users
+                .Where(u => u.IsActive && (u.Role == UserRoles.Administrator || u.Role == UserRoles.Owner))
+                .Select(u => new { u.Id, u.Role })
+                .ToListAsync(stoppingToken);
+
+            foreach (var user in adminOwners)
+            {
+                var isAdmin = user.Role == UserRoles.Administrator;
+                var reminders = await reminderService.GetRemindersForUserAsync(user.Id, isAdmin, isOwner: true);
+                var upcoming = reminders.Count(r => r.Type == "Upcoming");
+                var overdue = reminders.Count(r => r.Type == "Overdue");
+
+                if (upcoming == 0 && overdue == 0)
+                {
+                    continue;
+                }
+
+                var message = overdue > 0
+                    ? $"{overdue} overdue payment(s) and {upcoming} upcoming payment(s) today."
+                    : $"{upcoming} upcoming payment(s) today.";
+
+                await pushService.SendNotificationAsync(user.Id, "RentTracker Payment Reminder", message, "/Notifications", stoppingToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending admin/owner push notifications");
+        }
     }
 }

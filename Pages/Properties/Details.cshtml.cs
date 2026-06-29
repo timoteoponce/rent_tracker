@@ -26,6 +26,7 @@ public class DetailsModel : PageModel
         Property = await _context.Properties
             .AsNoTracking()
             .Include(p => p.Units)
+            .Include(p => p.Owner)
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (Property == null)

@@ -158,6 +158,79 @@ This project is designed for extensive AI assistance. See [AGENTS.md](./AGENTS.m
 - Dependency injection patterns
 - Service layer guidelines
 
+## WhatsApp Notification Templates
+
+The app uses Meta Cloud API templates for WhatsApp notifications. All 5 templates must be created in your [Meta Business Manager](https://business.facebook.com) → WhatsApp → Template Management.
+
+### Template: `renttracker_test`
+
+Used for "Test Connection" on the WhatsApp settings page.
+
+| Parameter | Value |
+|-----------|-------|
+| Body | `Test connection from RentTracker. If you receive this, the API is working correctly.` |
+| No variables | Static text only |
+
+### Template: `renttracker_payment_due_soon`
+
+Sent to the tenant `DueSoonDaysBefore` days before the payment due date.
+
+| Parameter | Sample value | Description |
+|-----------|-------------|-------------|
+| `{{1}}` | `1500` | Agreed rent amount |
+| `{{2}}` | `Sample Property` | Property name |
+| `{{3}}` | `3` | Days until due |
+| `{{4}}` | `01 Jul 2026` | Due date |
+
+**Example body:** `Hello! Reminder that your rent of 1500 BOB for Sample Property is due in 3 days (01 Jul 2026). Please make the payment on time.`
+
+### Template: `renttracker_payment_today`
+
+Sent to the tenant on the payment due date.
+
+| Parameter | Sample value | Description |
+|-----------|-------------|-------------|
+| `{{1}}` | `1500` | Agreed rent amount |
+| `{{2}}` | `Sample Property` | Property name |
+| `{{3}}` | `01 Jul 2026` | Due date |
+
+**Example body:** `Hello! This is a reminder that your rent of 1500 BOB for Sample Property is due today (01 Jul 2026). Please make the payment as soon as possible.`
+
+### Template: `renttracker_payment_overdue`
+
+Sent daily to the tenant after the due date until payment is received.
+
+| Parameter | Sample value | Description |
+|-----------|-------------|-------------|
+| `{{1}}` | `1500` | Agreed rent amount |
+| `{{2}}` | `Sample Property` | Property name |
+| `{{3}}` | `01 Jul 2026` | Due date |
+| `{{4}}` | `15` | Days overdue |
+
+**Example body:** `Hello! Your rent of 1500 BOB for Sample Property (due 01 Jul 2026) is now 15 days overdue. Please make the payment immediately to avoid further issues.`
+
+### Template: `renttracker_overdue_summary`
+
+Sent daily to the property owner (lender) listing all overdue payments.
+
+| Parameter | Sample value | Description |
+|-----------|-------------|-------------|
+| `{{1}}` | `29 Jun 2026` | Current date |
+| `{{2}}` | `2` | Number of overdue items |
+| `{{3}}` | `Juan Perez owes 1500 BOB for Sample Property (Jun 2026)` | Overdue list, semicolon-separated |
+
+**Example body:** `Overdue Summary for 29 Jun 2026: You have 2 overdue payments. Juan Perez owes 1500 BOB for Sample Property (Jun 2026); Maria Lopez owes 2000 BOB for Another Property (Jun 2026)`
+
+### Creating the Templates
+
+1. Go to [Meta Business Manager](https://business.facebook.com) → WhatsApp → Template Management
+2. Click **Create Template** → **Custom**
+3. Choose category (Utility recommended)
+4. Set the template name exactly as listed above (e.g., `renttracker_payment_due_soon`)
+5. Add body text with `{{1}}`, `{{2}}`, etc. placeholders
+6. Add a sample value for each parameter to pass Meta's review
+7. Submit for review — Utility templates are usually approved quickly
+
 ### Support & Maintenance
 - **.NET 9 LTS** supported until May 2026
 - **SQLite** supported until 2050

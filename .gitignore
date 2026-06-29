@@ -207,6 +207,8 @@ Data/*.db-shm
 *.db-shm
 # WhatsApp encryption key (auto-generated)
 data/whatsapp-key.txt
+# Push notification VAPID keys (auto-generated)
+data/push-vapid.txt
 # NuGet v3's project.json files produces more ignorable files
 *.nuget.props
 *.nuget.targets

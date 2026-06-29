@@ -22,6 +22,7 @@ public class RentTrackerDbContext : DbContext
     public DbSet<PropertyPriceHistory> PropertyPriceHistory => Set<PropertyPriceHistory>();
     public DbSet<WhatsAppSettings> WhatsAppSettings => Set<WhatsAppSettings>();
     public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
+    public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -129,6 +130,7 @@ public class RentTrackerDbContext : DbContext
             entity.Property(s => s.Provider).HasMaxLength(50);
             entity.Property(s => s.AccessToken).HasMaxLength(500);
             entity.Property(s => s.PhoneNumberId).HasMaxLength(100);
+            entity.Property(s => s.DryRunPhoneNumber).HasMaxLength(20);
             entity.Property(s => s.BusinessAccountId).HasMaxLength(100);
             entity.Property(s => s.VerifyToken).HasMaxLength(200);
             entity.Property(s => s.TemplateLanguage).HasMaxLength(10).HasDefaultValue("en");
@@ -154,7 +156,24 @@ public class RentTrackerDbContext : DbContext
             entity.HasOne(n => n.RecipientUser)
                 .WithMany()
                 .HasForeignKey(n => n.RecipientUserId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false);
+        });
+
+        // PushSubscription configuration
+        modelBuilder.Entity<PushSubscription>(entity =>
+        {
+            entity.Property(s => s.Endpoint).HasMaxLength(500);
+            entity.Property(s => s.P256dh).HasMaxLength(200);
+            entity.Property(s => s.Auth).HasMaxLength(200);
+
+            entity.HasIndex(s => s.UserId);
+            entity.HasIndex(s => s.Endpoint).IsUnique();
+
+            entity.HasOne(s => s.User)
+                .WithMany()
+                .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

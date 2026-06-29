@@ -48,6 +48,7 @@ public class WhatsAppModel : PageModel
             IsEnabled = settings.IsEnabled,
             AccessToken = string.IsNullOrEmpty(settings.AccessToken) ? "" : "********",
             PhoneNumberId = settings.PhoneNumberId ?? "",
+            DryRunPhoneNumber = settings.DryRunPhoneNumber ?? "",
             BusinessAccountId = settings.BusinessAccountId ?? "",
             VerifyToken = settings.VerifyToken ?? "",
             EnablePaymentDueSoon = settings.EnablePaymentDueSoon,
@@ -77,6 +78,7 @@ public class WhatsAppModel : PageModel
 
         settings.IsEnabled = Input.IsEnabled;
         settings.PhoneNumberId = string.IsNullOrWhiteSpace(Input.PhoneNumberId) ? null : Input.PhoneNumberId;
+        settings.DryRunPhoneNumber = string.IsNullOrWhiteSpace(Input.DryRunPhoneNumber) ? null : Input.DryRunPhoneNumber;
         settings.BusinessAccountId = string.IsNullOrWhiteSpace(Input.BusinessAccountId) ? null : Input.BusinessAccountId;
         settings.VerifyToken = string.IsNullOrWhiteSpace(Input.VerifyToken) ? null : Input.VerifyToken;
         settings.EnablePaymentDueSoon = Input.EnablePaymentDueSoon;
@@ -127,13 +129,46 @@ public class WhatsAppModel : PageModel
         return new JsonResult(new { success, message });
     }
 
+    public async Task<IActionResult> OnPostRunDryRunAsync([FromForm] string? testPhoneNumber)
+    {
+        var settings = await _notificationService.GetSettingsAsync();
+        var phoneNumber = string.IsNullOrWhiteSpace(testPhoneNumber)
+            ? settings?.DryRunPhoneNumber
+            : testPhoneNumber;
+
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            return new JsonResult(new { success = false, message = "Please provide a dry-run phone number." });
+        }
+
+        var result = await _notificationService.ProcessDryRunAsync(phoneNumber);
+
+        return new JsonResult(new
+        {
+            success = result.Success,
+            message = result.Message,
+            totalAttempted = result.TotalAttempted,
+            totalSucceeded = result.TotalSucceeded,
+            totalFailed = result.TotalFailed,
+            types = result.Types.Select(t => new
+            {
+                t.Type,
+                t.Attempted,
+                t.Succeeded,
+                t.Failed,
+                t.Error
+            })
+        });
+    }
+
     public class WhatsAppSettingsInput
     {
         public bool IsEnabled { get; set; }
-        public string AccessToken { get; set; } = "";
-        public string PhoneNumberId { get; set; } = "";
-        public string BusinessAccountId { get; set; } = "";
-        public string VerifyToken { get; set; } = "";
+        public string? AccessToken { get; set; } = "";
+        public string? PhoneNumberId { get; set; } = "";
+        public string? DryRunPhoneNumber { get; set; } = "";
+        public string? BusinessAccountId { get; set; } = "";
+        public string? VerifyToken { get; set; } = "";
         public bool EnablePaymentDueSoon { get; set; } = true;
         public bool EnablePaymentToday { get; set; } = true;
         public bool EnablePaymentOverdue { get; set; } = true;
