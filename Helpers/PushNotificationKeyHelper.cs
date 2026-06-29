@@ -13,9 +13,10 @@ public static class PushNotificationKeyHelper
     {
         var publicKey = configuration["PushNotifications:PublicKey"];
         var privateKey = configuration["PushNotifications:PrivateKey"];
+        var subject = configuration["PushNotifications:Subject"];
         var keyPath = Path.Combine(environment.ContentRootPath, "data", "push-vapid.txt");
 
-        if (string.IsNullOrWhiteSpace(publicKey) || string.IsNullOrWhiteSpace(privateKey))
+        if (string.IsNullOrWhiteSpace(publicKey) || string.IsNullOrWhiteSpace(privateKey) || string.IsNullOrWhiteSpace(subject))
         {
             if (File.Exists(keyPath))
             {
@@ -26,6 +27,7 @@ public static class PushNotificationKeyHelper
 
                 publicKey = GetValue(lines, "PublicKey") ?? publicKey;
                 privateKey = GetValue(lines, "PrivateKey") ?? privateKey;
+                subject = GetValue(lines, "Subject") ?? subject;
             }
         }
 
@@ -46,8 +48,11 @@ public static class PushNotificationKeyHelper
                 File.WriteAllLines(keyPath, new[]
                 {
                     $"PublicKey={publicKey}",
-                    $"PrivateKey={privateKey}"
+                    $"PrivateKey={privateKey}",
+                    "Subject=mailto:renttracker@localhost"
                 });
+
+                subject ??= "mailto:renttracker@localhost";
             }
             else
             {
@@ -58,12 +63,11 @@ public static class PushNotificationKeyHelper
             }
         }
 
-        var subject = configuration["PushNotifications:Subject"];
         if (string.IsNullOrWhiteSpace(subject))
         {
             subject = environment.IsDevelopment()
                 ? "mailto:renttracker@localhost"
-                : throw new InvalidOperationException("PushNotifications:Subject must be configured in production (e.g., mailto:admin@example.com or https://your-domain).");
+                : throw new InvalidOperationException("PushNotifications:Subject must be configured in production (set PushNotifications__Subject or Subject in data/push-vapid.txt, e.g., mailto:admin@example.com or https://your-domain).");
         }
 
         return new VapidKeys(publicKey, privateKey, subject);
