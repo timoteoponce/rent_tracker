@@ -62,6 +62,6 @@ jobs:
             docker load < /tmp/image.tar
             docker stop renttracker 2>/dev/null || true
             docker rm renttracker 2>/dev/null || true
-            docker run -d --name renttracker --restart unless-stopped -p 127.0.0.1:9919:8080 -v ~/rent-tracker:/app/data -e ASPNETCORE_ENVIRONMENT=Production -e ConnectionStrings__DefaultConnection="Data Source=/app/data/renttracker.db;Foreign Keys=True;" -e ASPNETCORE_URLS=http://+:8080 renttracker:latest
+            docker run -d --name renttracker --restart unless-stopped -p 127.0.0.1:9919:8080 -v ~/rent-tracker:/app/data -e ASPNETCORE_ENVIRONMENT=Production -e ConnectionStrings__DefaultConnection="Data Source=/app/data/renttracker.db;Foreign Keys=True;" -e ASPNETCORE_URLS=http://+:8080 -e WhatsApp__EncryptionKey="${{ secrets.WHATSAPP_ENCRYPTION_KEY }}" renttracker:latest
             echo "✓ Deployed"
           SCRIPT

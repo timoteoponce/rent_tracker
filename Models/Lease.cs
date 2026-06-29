@@ -39,6 +39,9 @@ public class Lease
 
     public DateTimeOffset? UpdatedAt { get; set; }
 
+    [Range(1, 31)]
+    public int PaymentDueDay { get; set; } = 1;
+
     // Foreign keys
     public Guid PropertyId { get; set; }
     public Guid? PropertyUnitId { get; set; }

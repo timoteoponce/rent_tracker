@@ -4,7 +4,7 @@
 # Then run: mise install
 
 [tools]
-dotnet = "9.0.200"
+dotnet = "9.0"
 
 # Environment variables for the project
 [env]

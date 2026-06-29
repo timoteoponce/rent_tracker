@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using RentTracker.Web.Data;
+using RentTracker.Web.Helpers;
 using RentTracker.Web.Models;
+using RentTracker.Web.Services;
 using System.Security.Claims;
 
 namespace RentTracker.Web;
@@ -11,6 +13,38 @@ public class Program
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+
+        // Resolve WhatsApp encryption key (env var > file > auto-generate in dev)
+        var encryptionKey = builder.Configuration["WhatsApp:EncryptionKey"];
+        var keyPath = Path.Combine(builder.Environment.ContentRootPath, "data", "whatsapp-key.txt");
+        if (string.IsNullOrWhiteSpace(encryptionKey) && File.Exists(keyPath))
+        {
+            encryptionKey = File.ReadAllText(keyPath).Trim();
+        }
+        if (string.IsNullOrWhiteSpace(encryptionKey))
+        {
+            if (builder.Environment.IsDevelopment())
+            {
+                var dataDir = Path.Combine(builder.Environment.ContentRootPath, "data");
+                if (!Directory.Exists(dataDir))
+                {
+                    Directory.CreateDirectory(dataDir);
+                }
+                encryptionKey = EncryptionHelper.GenerateKey();
+                File.WriteAllText(keyPath, encryptionKey);
+                builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["WhatsApp:EncryptionKey"] = encryptionKey
+                });
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    "WhatsApp encryption key is missing. " +
+                    "Set the 'WhatsApp__EncryptionKey' environment variable (or 'WhatsApp:EncryptionKey' in appsettings.json) " +
+                    "or mount a persistent volume with 'data/whatsapp-key.txt'.");
+            }
+        }
 
         // Configure database
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -53,6 +87,19 @@ public class Program
         // Replace with PostgresQueryService if switching providers
         builder.Services.AddScoped<Data.Queries.ISqlQueryService, Data.Queries.SqliteQueryService>();
 
+        // Register encryption helper for WhatsApp credentials
+        builder.Services.AddSingleton<EncryptionHelper>();
+
+        // Register HttpClient for WhatsApp API calls
+        builder.Services.AddHttpClient();
+
+        // Register WhatsApp notification services
+        builder.Services.AddScoped<IWhatsAppService, MetaCloudWhatsAppService>();
+        builder.Services.AddScoped<INotificationService, NotificationService>();
+
+        // Register background service for periodic notification checks
+        builder.Services.AddHostedService<NotificationBackgroundService>();
+
         var app = builder.Build();
 
         // Apply migrations on startup
@@ -75,6 +122,9 @@ public class Program
 
             // Migrate existing users to have username and email
             await MigrateExistingUsersAsync(dbContext);
+
+            // Seed default WhatsApp settings if not exists
+            await SeedWhatsAppSettingsAsync(dbContext);
         }
 
         if (!app.Environment.IsDevelopment())
@@ -155,6 +205,35 @@ public class Program
 
         if (usersNeedingMigration.Any())
         {
+            await context.SaveChangesAsync();
+        }
+    }
+
+    private static async Task SeedWhatsAppSettingsAsync(RentTrackerDbContext context)
+    {
+        var settingsExist = await context.WhatsAppSettings.AnyAsync();
+        if (!settingsExist)
+        {
+            var settings = new WhatsAppSettings
+            {
+                IsEnabled = false,
+                Provider = "MetaCloud",
+                DueSoonDaysBefore = 3,
+                TimeZoneOffset = -4,
+                TestTemplateName = "renttracker_test",
+                PaymentDueSoonTemplateName = "renttracker_payment_due_soon",
+                PaymentTodayTemplateName = "renttracker_payment_today",
+                PaymentOverdueTemplateName = "renttracker_payment_overdue",
+                OverdueSummaryTemplateName = "renttracker_overdue_summary",
+                EnablePaymentDueSoon = true,
+                EnablePaymentToday = true,
+                EnablePaymentOverdue = true,
+                EnableOverdueToTenant = true,
+                EnableOverdueToLender = true,
+                EnableIncomingBot = false,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            context.WhatsAppSettings.Add(settings);
             await context.SaveChangesAsync();
         }
     }

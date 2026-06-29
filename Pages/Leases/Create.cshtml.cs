@@ -30,6 +30,7 @@ public class CreateModel : PageModel
     public async Task OnGetAsync(Guid? propertyId, Guid? unitId)
     {
         Lease.StartDate = DateTimeOffset.UtcNow;
+        Lease.PaymentDueDay = 1;
 
         if (unitId.HasValue)
         {

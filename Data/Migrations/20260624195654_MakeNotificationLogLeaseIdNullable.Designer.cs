@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RentTracker.Web.Data;
 
@@ -10,9 +11,11 @@ using RentTracker.Web.Data;
 namespace RentTracker.Web.Data.Migrations
 {
     [DbContext(typeof(RentTrackerDbContext))]
-    partial class RentTrackerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260624195654_MakeNotificationLogLeaseIdNullable")]
+    partial class MakeNotificationLogLeaseIdNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -437,26 +440,6 @@ namespace RentTracker.Web.Data.Migrations
                     b.Property<DateTimeOffset?>("LastNotificationRunDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("OverdueSummaryTemplateName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("PaymentDueSoonTemplateName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("PaymentOverdueTemplateName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("PaymentTodayTemplateName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("PhoneNumberId")
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
@@ -465,16 +448,6 @@ namespace RentTracker.Web.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
-
-                    b.Property<string>("TestTemplateName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("TimeZoneOffset")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
-                        .HasDefaultValue(-4);
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("TEXT");

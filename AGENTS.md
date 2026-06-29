@@ -431,6 +431,7 @@ var payments = _context.Payments
 | 2026-04-13 | Skip tests for now | Single developer, can add later if needed |
 | 2026-04-13 | Vanilla CSS vs Bootstrap | No dependency, CSS is now capable enough |
 | 2026-04-13 | VS Code as primary dev environment | Simple, cross-platform, good .NET support |
+| 2026-06-17 | WhatsApp notifications via Meta Cloud API | Enable payment reminders via dedicated SIM card, no external SDK dependency |
 
 ## Resources
 
@@ -482,6 +483,96 @@ Shared partials live in `Pages/Shared/` and should be used for repeated markup:
 - `_ReadOnlyField.cshtml` — Label + static value pairs (`ReadOnlyFieldModel`)
 
 When adding a new page, check if any of these patterns apply and use the partial instead of copy-pasting.
+
+## WhatsApp Notifications
+
+The app supports WhatsApp Business API notifications for payment reminders. This is an optional feature that can be enabled through the Settings page (Admin only).
+
+### New Models
+
+**User.PhoneNumber** — `[StringLength(20)][Phone]` — E.164 format for WhatsApp notifications (e.g., +5917XXXXXXX). Optional for all users; required for tenants and owners to receive notifications.
+
+**Lease.PaymentDueDay** — `[Range(1, 31)]` default `1` — Day of month when rent is due. Used to calculate notification timing.
+
+**WhatsAppSettings** — Singleton DB row storing:
+- `IsEnabled` — Master toggle for all WhatsApp notifications
+- `AccessToken` — AES-encrypted Meta Cloud API access token
+- `PhoneNumberId` — WhatsApp Business API phone number ID
+- `BusinessAccountId` — Meta Business account ID
+- `VerifyToken` — Webhook verification token (for Phase 2 bot)
+- `EnablePaymentDueSoon` / `EnablePaymentToday` / `EnablePaymentOverdue` — Notification type toggles
+- `EnableOverdueToTenant` / `EnableOverdueToLender` — Individual recipient toggles
+- `DueSoonDaysBefore` — Days before due date to send "due soon" notification (default 3)
+- `EnableIncomingBot` — Phase 2 toggle (disabled)
+
+**NotificationLog** — Audit trail + deduplication:
+- Prevents duplicate notifications (one per type/lease/period/day)
+- Logs sent/failed status with error messages
+- Tracks recipient phone numbers
+
+### Notification Types
+
+**payment-due-soon** (tenant): Sent `DueSoonDaysBefore` days before `PaymentDueDay`. One notification per lease per period. Skipped if payment already received or tenant has no phone number.
+
+**payment-today** (tenant): Sent on `PaymentDueDay`. One notification per lease per period. Same skip conditions.
+
+**payment-overdue** (tenant + owner summary): Sent daily after `PaymentDueDay` if no payment received.
+- Tenant receives individual message per overdue lease/period
+- Owner receives ONE daily summary message grouped by owner, listing all overdue payments (tenant name, property, amount, period)
+
+### Services
+
+| Service | File | Description |
+|---------|------|-------------|
+| `EncryptionHelper` | `Helpers/EncryptionHelper.cs` | AES-256 encrypt/decrypt for AccessToken storage |
+| `IWhatsAppService` | `Services/IWhatsAppService.cs` | Interface: `SendMessageAsync`, `TestConnectionAsync` |
+| `MetaCloudWhatsAppService` | `Services/MetaCloudWhatsAppService.cs` | Meta Cloud API via HttpClient (no NuGet dependency) |
+| `INotificationService` | `Services/INotificationService.cs` | Interface: notification processing, settings management |
+| `NotificationService` | `Services/NotificationService.cs` | Core logic: determine what/when/who to notify |
+| `NotificationBackgroundService` | `Services/NotificationBackgroundService.cs` | BackgroundService running every 6 hours |
+
+### Settings Page
+
+**Pages/Settings/Index** — Admin hub linking to WhatsApp configuration
+
+**Pages/Settings/WhatsApp** — Full configuration form with:
+- Collapsible setup guide for WhatsApp Business App with dedicated SIM card
+- API credentials (AccessToken, PhoneNumberId, BusinessAccountId)
+- Test Connection button
+- Notification type toggles with descriptions
+- Incoming Bot toggle (disabled, "Phase 2")
+
+### Phase 2: WhatsApp Bot (Incoming Messages)
+
+Design ready but not implemented. Would allow landlords to mark payments as paid via WhatsApp messages:
+- Webhook endpoint: `POST /api/whatsapp/webhook`
+- Command format: `PAGADO <property-code> <month> <year>`
+- Requires Meta Business API configured for incoming messages
+
+### Credential Security
+
+Access tokens are AES-256 encrypted in the database with a random IV per encryption.
+
+**Key resolution order:**
+1. `WhatsApp:EncryptionKey` environment variable (or `WhatsApp__EncryptionKey` via env vars)
+2. `appsettings.json` under `WhatsApp:EncryptionKey`
+3. `data/whatsapp-key.txt` (from a previous run or mounted volume)
+4. **Development only**: Auto-generate and save to `data/whatsapp-key.txt`
+
+**Production (GitHub Actions / Docker):**
+- Set the `WhatsApp__EncryptionKey` environment variable via a GitHub Secret
+- The CI/CD workflow passes it to the container: `-e WhatsApp__EncryptionKey="${{ secrets.WHATSAPP_ENCRYPTION_KEY }}"`
+- The key is NOT auto-generated in production — the app will fail fast if missing
+
+**Development:**
+- The app auto-generates a key on first startup and saves it to `data/whatsapp-key.txt`
+- You can also generate one manually: `EncryptionHelper.GenerateKey()`
+
+**Note:** `data/whatsapp-key.txt` is excluded from Git and Docker builds (see `.gitignore` and `.dockerignore`).
+
+### Disabling Notifications for Users Without Phone Numbers
+
+Users with null `PhoneNumber` are skipped during notification processing. A warning is logged to `NotificationLog` with status "Failed" and reason "No phone number". No notification is sent to these users.
 
 ## Critical: Preventing Silent Data Loss
 

@@ -148,7 +148,8 @@ public class EditModel : PageModel
             l => l.AgreedWarranty,
             l => l.StartDate,
             l => l.EndDate,
-            l => l.PropertyUnitId))
+            l => l.PropertyUnitId,
+            l => l.PaymentDueDay))
         {
             Lease = existingLease;
             await LoadUnitListAsync();

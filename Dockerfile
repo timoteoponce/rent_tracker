@@ -33,8 +33,8 @@ USER appuser
 # Copy published application
 COPY --from=build /app/publish .
 
-# Create data directory for SQLite (will be mounted as volume)
-RUN mkdir -p /app/data
+# Create data directory for SQLite and ensure non-root user can write to it
+RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
 
 # Expose port
 EXPOSE 8080

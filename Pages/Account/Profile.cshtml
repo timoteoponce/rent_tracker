@@ -40,6 +40,13 @@
         </div>
 
         <div class="form-group">
+            <label asp-for="Input.PhoneNumber"></label>
+            <input asp-for="Input.PhoneNumber" class="form-control" placeholder="+5917XXXXXXX" />
+            <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
+            <small class="text-muted">E.164 format with country code for WhatsApp notifications</small>
+        </div>
+
+        <div class="form-group">
             <label>Role</label>
             <div class="form-control-static">
                 <partial name="_StatusBadge" model='new StatusBadgeModel { Status = Model.CurrentUser.Role, Type = "UserRole" }' />
