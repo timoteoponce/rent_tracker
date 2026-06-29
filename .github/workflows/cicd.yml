@@ -60,6 +60,25 @@ jobs:
               ls -t ~/rent-tracker/backup-*.db 2>/dev/null | tail -n +4 | xargs rm -f 2>/dev/null || true
             fi
             docker load < /tmp/image.tar
+
+            if [ ! -f ~/rent-tracker/push-vapid.txt ]; then
+              echo "Generating push-vapid.txt..."
+              docker rm -f renttracker-keygen 2>/dev/null || true
+              docker run -d --name renttracker-keygen -v ~/rent-tracker:/app/data -e ASPNETCORE_ENVIRONMENT=Development -e ConnectionStrings__DefaultConnection="Data Source=/app/data/renttracker.db;Foreign Keys=True;" -e ASPNETCORE_URLS=http://+:8080 renttracker:latest
+              sleep 8
+              docker stop renttracker-keygen 2>/dev/null || true
+              docker rm renttracker-keygen 2>/dev/null || true
+
+              if [ ! -f ~/rent-tracker/push-vapid.txt ]; then
+                echo "Failed to generate ~/rent-tracker/push-vapid.txt"
+                exit 1
+              fi
+
+              if ! grep -q '^Subject=' ~/rent-tracker/push-vapid.txt; then
+                printf '\nSubject=mailto:admin@example.com\n' >> ~/rent-tracker/push-vapid.txt
+              fi
+            fi
+
             docker stop renttracker 2>/dev/null || true
             docker rm renttracker 2>/dev/null || true
             docker run -d --name renttracker --restart unless-stopped -p 127.0.0.1:9919:8080 -v ~/rent-tracker:/app/data -e ASPNETCORE_ENVIRONMENT=Production -e ConnectionStrings__DefaultConnection="Data Source=/app/data/renttracker.db;Foreign Keys=True;" -e ASPNETCORE_URLS=http://+:8080 -e WhatsApp__EncryptionKey="${{ secrets.WHATSAPP_ENCRYPTION_KEY }}" renttracker:latest
