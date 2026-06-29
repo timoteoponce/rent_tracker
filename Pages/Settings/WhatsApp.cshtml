@@ -263,6 +263,12 @@
                 <input asp-for="Input.OverdueSummaryTemplateName" class="form-control" />
                 <span class="field-hint">Default: renttracker_overdue_summary</span>
             </div>
+
+            <div class="form-group">
+                <label asp-for="Input.TemplateLanguage">Template Language Code</label>
+                <input asp-for="Input.TemplateLanguage" class="form-control" />
+                <span class="field-hint">Language code for all templates (e.g., en, es, pt_BR). Check your template's language in Meta Business Suite.</span>
+            </div>
         </div>
 
         <div class="form-section">

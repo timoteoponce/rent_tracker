@@ -182,6 +182,9 @@ public class MetaCloudWhatsAppService : IWhatsAppService
 
         try
         {
+            var settings = await GetSettingsAsync();
+            var languageCode = settings?.TemplateLanguage ?? "en";
+
             var url = $"https://graph.facebook.com/{ApiVersion}/{phoneNumberId}/messages";
 
             using var request = new HttpRequestMessage(HttpMethod.Post, url);
@@ -205,7 +208,7 @@ public class MetaCloudWhatsAppService : IWhatsAppService
                 template = new
                 {
                     name = templateName,
-                    language = new { code = "en_US" },
+                    language = new { code = languageCode },
                     components = templateComponents
                 }
             };

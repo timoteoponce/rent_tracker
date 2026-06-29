@@ -62,6 +62,7 @@ public class WhatsAppModel : PageModel
             PaymentTodayTemplateName = settings.PaymentTodayTemplateName,
             PaymentOverdueTemplateName = settings.PaymentOverdueTemplateName,
             OverdueSummaryTemplateName = settings.OverdueSummaryTemplateName,
+            TemplateLanguage = settings.TemplateLanguage,
             EnableIncomingBot = false
         };
     }
@@ -90,6 +91,7 @@ public class WhatsAppModel : PageModel
         settings.PaymentTodayTemplateName = Input.PaymentTodayTemplateName;
         settings.PaymentOverdueTemplateName = Input.PaymentOverdueTemplateName;
         settings.OverdueSummaryTemplateName = Input.OverdueSummaryTemplateName;
+        settings.TemplateLanguage = Input.TemplateLanguage;
         settings.EnableIncomingBot = false;
 
         if (!string.IsNullOrWhiteSpace(Input.AccessToken) && Input.AccessToken != "********")
@@ -146,6 +148,7 @@ public class WhatsAppModel : PageModel
         public string PaymentTodayTemplateName { get; set; } = "renttracker_payment_today";
         public string PaymentOverdueTemplateName { get; set; } = "renttracker_payment_overdue";
         public string OverdueSummaryTemplateName { get; set; } = "renttracker_overdue_summary";
+        public string TemplateLanguage { get; set; } = "en";
         public bool EnableIncomingBot { get; set; }
     }
 }

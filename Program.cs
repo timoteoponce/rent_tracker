@@ -225,6 +225,7 @@ public class Program
                 PaymentTodayTemplateName = "renttracker_payment_today",
                 PaymentOverdueTemplateName = "renttracker_payment_overdue",
                 OverdueSummaryTemplateName = "renttracker_overdue_summary",
+                TemplateLanguage = "en",
                 EnablePaymentDueSoon = true,
                 EnablePaymentToday = true,
                 EnablePaymentOverdue = true,
