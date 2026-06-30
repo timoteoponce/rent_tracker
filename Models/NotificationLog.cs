@@ -52,4 +52,15 @@ public static class NotificationType
     public const string OverdueSummary = "OverdueSummary";
     public const string TestMessage = "TestMessage";
     public const string DryRun = "DryRun";
+
+    public static string GetDisplayName(string type) => type switch
+    {
+        PaymentDueSoon => "Due Soon",
+        PaymentToday => "Due Today",
+        PaymentOverdue => "Overdue",
+        OverdueSummary => "Owner Summary",
+        TestMessage => "Test",
+        DryRun => "Dry Run",
+        _ => type
+    };
 }

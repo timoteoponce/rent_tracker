@@ -95,4 +95,89 @@
             <partial name="_EmptyState" model='new EmptyStateModel { Message = "No upcoming payments." }' />
         }
     </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">WhatsApp Reminders Sent</h3>
+        </div>
+        @if (Model.WhatsAppEnabled)
+        {
+            <p class="text-muted whatsapp-status-note">
+                WhatsApp notifications are enabled.
+                @if (Model.LastWhatsAppRunAtLocal.HasValue)
+                {
+                    <span>Last automatic check: @Model.LastWhatsAppRunAtLocal.Value.ToString("dd MMM yyyy HH:mm") (local time).</span>
+                }
+                else
+                {
+                    <span>No automatic check has run yet.</span>
+                }
+            </p>
+        }
+        else
+        {
+            <p class="text-muted whatsapp-status-note">WhatsApp notifications are disabled.</p>
+        }
+        @if (Model.WhatsAppHistory.Any())
+        {
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Sent At</th>
+                            <th>Type</th>
+                            <th>Recipient</th>
+                            <th>Property</th>
+                            <th>Tenant</th>
+                            <th>Period</th>
+                            <th>Status</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.WhatsAppHistory)
+                        {
+                            <tr>
+                                <td>@item.SentAtLocal.ToString("dd MMM yyyy HH:mm")</td>
+                                <td>@item.TypeDisplayName</td>
+                                <td>
+                                    @item.RecipientRole
+                                    @if (!string.IsNullOrEmpty(item.RecipientName))
+                                    {
+                                        <span> — @item.RecipientName</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.RecipientPhoneNumber))
+                                    {
+                                        <br /><span class="text-muted">@item.RecipientPhoneNumber</span>
+                                    }
+                                </td>
+                                <td>@(item.PropertyName ?? "—")</td>
+                                <td>@(item.TenantName ?? "—")</td>
+                                <td>@item.ForPeriod.ToString("MMM yyyy")</td>
+                                <td>
+                                    <span class="badge @(item.Status == NotificationLogStatus.Sent ? "badge-success" : "badge-danger")">
+                                        @item.Status
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.ErrorMessage))
+                                    {
+                                        <span class="text-danger">@item.ErrorMessage</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">@item.MessageContent</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <partial name="_EmptyState" model='new EmptyStateModel { Message = "No WhatsApp reminders have been sent yet." }' />
+        }
+    </div>
 </div>
