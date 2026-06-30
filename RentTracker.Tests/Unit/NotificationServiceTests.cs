@@ -164,6 +164,80 @@ public class NotificationServiceTests
     }
 
     [Fact]
+    public async Task GetNotificationHistoryAsync_Admin_SeesAllLogs()
+    {
+        using var context = GetInMemoryContext();
+        var ownerId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+        var propertyId = Guid.NewGuid();
+        var leaseId = Guid.NewGuid();
+        var otherLeaseId = Guid.NewGuid();
+
+        context.Users.AddRange(
+            new User { Id = ownerId, Username = "owner", Email = "o@test.ch", FullName = "Owner", Role = UserRoles.Owner, PasswordHash = "x", IsActive = true, CreatedAt = DateTimeOffset.UtcNow },
+            new User { Id = tenantId, Username = "tenant", Email = "t@test.ch", FullName = "Tenant", Role = UserRoles.Tenant, PasswordHash = "x", IsActive = true, CreatedAt = DateTimeOffset.UtcNow }
+        );
+        context.Properties.Add(new Property { Id = propertyId, Name = "Casa", IsEnabled = true, CreatedAt = DateTimeOffset.UtcNow });
+        context.Leases.AddRange(
+            new Lease { Id = leaseId, PropertyId = propertyId, TenantId = tenantId, Status = LeaseStatus.Active, AgreedPrice = 1000, StartDate = DateTimeOffset.UtcNow, CreatedAt = DateTimeOffset.UtcNow },
+            new Lease { Id = otherLeaseId, PropertyId = propertyId, TenantId = tenantId, Status = LeaseStatus.Active, AgreedPrice = 1200, StartDate = DateTimeOffset.UtcNow, CreatedAt = DateTimeOffset.UtcNow }
+        );
+        context.NotificationLogs.AddRange(
+            new NotificationLog { Type = NotificationType.PaymentToday, LeaseId = leaseId, ForPeriod = new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero), RecipientRole = "Tenant", RecipientUserId = tenantId, RecipientPhoneNumber = "+59170000001", MessageContent = "tenant msg", Status = NotificationLogStatus.Sent, SentAt = DateTimeOffset.UtcNow.AddHours(-1) },
+            new NotificationLog { Type = NotificationType.OverdueSummary, LeaseId = null, ForPeriod = new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero), RecipientRole = "Owner", RecipientUserId = ownerId, RecipientPhoneNumber = "+59170000002", MessageContent = "owner msg", Status = NotificationLogStatus.Sent, SentAt = DateTimeOffset.UtcNow }
+        );
+        context.SaveChanges();
+
+        var service = new RentTracker.Web.Services.NotificationService(context, new FakeWhatsAppService());
+        var history = await service.GetNotificationHistoryAsync(ownerId, isAdmin: true);
+
+        Assert.Equal(2, history.Count);
+        Assert.Contains(history, h => h.Type == NotificationType.PaymentToday);
+        Assert.Contains(history, h => h.Type == NotificationType.OverdueSummary);
+    }
+
+    [Fact]
+    public async Task GetNotificationHistoryAsync_Owner_SeesOwnSummaryAndTenantRemindersForVisibleLeases()
+    {
+        using var context = GetInMemoryContext();
+        var ownerId = Guid.NewGuid();
+        var otherOwnerId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+        var publicPropertyId = Guid.NewGuid();
+        var privatePropertyId = Guid.NewGuid();
+        var publicLeaseId = Guid.NewGuid();
+        var privateLeaseId = Guid.NewGuid();
+
+        context.Users.AddRange(
+            new User { Id = ownerId, Username = "owner", Email = "o@test.ch", FullName = "Owner", Role = UserRoles.Owner, PasswordHash = "x", IsActive = true, CreatedAt = DateTimeOffset.UtcNow },
+            new User { Id = otherOwnerId, Username = "other", Email = "o2@test.ch", FullName = "Other", Role = UserRoles.Owner, PasswordHash = "x", IsActive = true, CreatedAt = DateTimeOffset.UtcNow },
+            new User { Id = tenantId, Username = "tenant", Email = "t@test.ch", FullName = "Tenant", Role = UserRoles.Tenant, PasswordHash = "x", IsActive = true, CreatedAt = DateTimeOffset.UtcNow }
+        );
+        context.Properties.AddRange(
+            new Property { Id = publicPropertyId, Name = "Public", IsPrivate = false, IsEnabled = true, CreatedAt = DateTimeOffset.UtcNow },
+            new Property { Id = privatePropertyId, Name = "Private", IsPrivate = true, LastEditedById = otherOwnerId, IsEnabled = true, CreatedAt = DateTimeOffset.UtcNow }
+        );
+        context.Leases.AddRange(
+            new Lease { Id = publicLeaseId, PropertyId = publicPropertyId, TenantId = tenantId, Status = LeaseStatus.Active, AgreedPrice = 1000, StartDate = DateTimeOffset.UtcNow, CreatedAt = DateTimeOffset.UtcNow },
+            new Lease { Id = privateLeaseId, PropertyId = privatePropertyId, TenantId = tenantId, Status = LeaseStatus.Active, AgreedPrice = 1200, StartDate = DateTimeOffset.UtcNow, CreatedAt = DateTimeOffset.UtcNow }
+        );
+        context.NotificationLogs.AddRange(
+            new NotificationLog { Type = NotificationType.PaymentToday, LeaseId = publicLeaseId, ForPeriod = new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero), RecipientRole = "Tenant", RecipientUserId = tenantId, RecipientPhoneNumber = "+59170000001", MessageContent = "public tenant msg", Status = NotificationLogStatus.Sent, SentAt = DateTimeOffset.UtcNow.AddHours(-1) },
+            new NotificationLog { Type = NotificationType.PaymentToday, LeaseId = privateLeaseId, ForPeriod = new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero), RecipientRole = "Tenant", RecipientUserId = tenantId, RecipientPhoneNumber = "+59170000001", MessageContent = "private tenant msg", Status = NotificationLogStatus.Sent, SentAt = DateTimeOffset.UtcNow.AddHours(-2) },
+            new NotificationLog { Type = NotificationType.OverdueSummary, LeaseId = null, ForPeriod = new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero), RecipientRole = "Owner", RecipientUserId = ownerId, RecipientPhoneNumber = "+59170000002", MessageContent = "owner summary", Status = NotificationLogStatus.Sent, SentAt = DateTimeOffset.UtcNow }
+        );
+        context.SaveChanges();
+
+        var service = new RentTracker.Web.Services.NotificationService(context, new FakeWhatsAppService());
+        var history = await service.GetNotificationHistoryAsync(ownerId, isAdmin: false);
+
+        Assert.Equal(2, history.Count);
+        Assert.Contains(history, h => h.Type == NotificationType.PaymentToday && h.LeaseId == publicLeaseId);
+        Assert.Contains(history, h => h.Type == NotificationType.OverdueSummary);
+        Assert.DoesNotContain(history, h => h.LeaseId == privateLeaseId);
+    }
+
+    [Fact]
     public void ProcessDryRunAsync_SendsOnePerEnabledTemplateToTestNumber()
     {
         using var context = GetInMemoryContext();

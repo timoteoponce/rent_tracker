@@ -166,6 +166,7 @@ public class NotificationService : INotificationService
 
         var allLeases = await _context.Leases
             .Include(l => l.Property).ThenInclude(p => p!.Owner)
+            .Include(l => l.Property).ThenInclude(p => p!.LastEditedBy)
             .Include(l => l.Tenant)
             .Where(l => l.Status == LeaseStatus.Active)
             .ToListAsync();
@@ -174,7 +175,9 @@ public class NotificationService : INotificationService
         foreach (var lease in allLeases)
         {
             var prop = lease.Property;
-            if (prop == null || prop.OwnerId == null)
+            var ownerId = prop?.OwnerId ?? prop?.LastEditedById;
+            var owner = prop?.Owner ?? prop?.LastEditedBy;
+            if (prop == null || !ownerId.HasValue || owner == null)
                 continue;
 
             // Check all months from lease start to current month for overdue payments
@@ -207,8 +210,8 @@ public class NotificationService : INotificationService
                     ForPeriod = month,
                     TenantId = lease.TenantId,
                     Tenant = lease.Tenant,
-                    OwnerId = prop.OwnerId.Value,
-                    Owner = prop.Owner,
+                    OwnerId = ownerId.Value,
+                    Owner = owner,
                     PropertyName = prop.Name ?? "the property"
                 });
 
@@ -274,6 +277,44 @@ public class NotificationService : INotificationService
                     owner.PhoneNumber, summaryMessage, success ? NotificationLogStatus.Sent : NotificationLogStatus.Failed, error);
             }
         }
+    }
+
+    public async Task<List<WhatsAppNotificationLogEntry>> GetNotificationHistoryAsync(Guid? userId, bool isAdmin, int limit = 100)
+    {
+        var settings = await GetSettingsAsync();
+        var timeZoneOffset = TimeSpan.FromHours(settings?.TimeZoneOffset ?? -4);
+
+        var logs = await _context.NotificationLogs
+            .AsNoTracking()
+            .Include(n => n.Lease)
+                .ThenInclude(l => l!.Property)
+            .Include(n => n.Lease)
+                .ThenInclude(l => l!.Tenant)
+            .Include(n => n.RecipientUser)
+            .ToListAsync();
+
+        IEnumerable<NotificationLog> filtered = logs;
+        if (!isAdmin && userId.HasValue)
+        {
+            var visibleLeaseIds = await _context.Leases
+                .AsNoTracking()
+                .VisibleToUser(userId, false, false)
+                .Select(l => l.Id)
+                .ToListAsync();
+            var visibleLeaseIdSet = visibleLeaseIds.ToHashSet();
+
+            filtered = logs.Where(n =>
+                n.RecipientUserId == userId.Value ||
+                (n.LeaseId.HasValue &&
+                 visibleLeaseIdSet.Contains(n.LeaseId.Value) &&
+                 n.RecipientRole == "Tenant"));
+        }
+
+        return filtered
+            .OrderByDescending(n => n.SentAt)
+            .Take(limit)
+            .Select(n => MapToLogEntry(n, timeZoneOffset))
+            .ToList();
     }
 
     public async Task<NotificationDryRunResult> ProcessDryRunAsync(string testPhoneNumber)
@@ -536,6 +577,28 @@ public class NotificationService : INotificationService
 
         _context.NotificationLogs.Add(log);
         await _context.SaveChangesAsync();
+    }
+
+    private static WhatsAppNotificationLogEntry MapToLogEntry(NotificationLog log, TimeSpan timeZoneOffset)
+    {
+        return new WhatsAppNotificationLogEntry
+        {
+            Id = log.Id,
+            Type = log.Type,
+            TypeDisplayName = NotificationType.GetDisplayName(log.Type),
+            RecipientRole = log.RecipientRole,
+            RecipientName = log.RecipientUser?.FullName,
+            RecipientPhoneNumber = log.RecipientPhoneNumber,
+            PropertyName = log.Lease?.Property?.Name,
+            TenantName = log.Lease?.Tenant?.FullName,
+            ForPeriod = log.ForPeriod,
+            Status = log.Status,
+            ErrorMessage = log.ErrorMessage,
+            MessageContent = log.MessageContent,
+            SentAt = log.SentAt,
+            SentAtLocal = log.SentAt.ToOffset(timeZoneOffset),
+            LeaseId = log.LeaseId
+        };
     }
 
     private class OverdueItem
