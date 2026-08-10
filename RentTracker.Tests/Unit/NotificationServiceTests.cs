@@ -276,6 +276,209 @@ public class NotificationServiceTests
         Assert.All(logs, log => Assert.Equal("+59179999999", log.RecipientPhoneNumber));
     }
 
+    [Fact]
+    public async Task EnsurePendingPaymentsAsync_CreatesCurrentAndNextPeriodPending()
+    {
+        using var context = GetInMemoryContext();
+        var leaseId = Guid.NewGuid();
+        var propertyId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+
+        context.Users.Add(new User
+        {
+            Id = tenantId,
+            Username = "tenant",
+            Email = "t@test.ch",
+            FullName = "Tenant",
+            Role = UserRoles.Tenant,
+            PasswordHash = "x",
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        context.Properties.Add(new Property
+        {
+            Id = propertyId,
+            Name = "Casa",
+            IsEnabled = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        context.Leases.Add(new Lease
+        {
+            Id = leaseId,
+            PropertyId = propertyId,
+            TenantId = tenantId,
+            Status = LeaseStatus.Active,
+            AgreedPrice = 1500m,
+            StartDate = DateTimeOffset.UtcNow,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        context.SaveChanges();
+
+        var service = new RentTracker.Web.Services.NotificationService(context, new FakeWhatsAppService());
+        await service.EnsurePendingPaymentsAsync();
+
+        var now = DateTimeOffset.UtcNow;
+        var currentMonth = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+        var nextMonth = currentMonth.AddMonths(1);
+
+        var created = context.Payments.Where(p => p.LeaseId == leaseId).ToList();
+        Assert.Equal(2, created.Count);
+        Assert.All(created, p =>
+        {
+            Assert.Equal(PaymentStatus.Pending, p.Status);
+            Assert.Equal(1500m, p.Amount);
+            Assert.Equal("BOB", p.Currency);
+        });
+        Assert.Contains(created, p => p.ForPeriod == currentMonth);
+        Assert.Contains(created, p => p.ForPeriod == nextMonth);
+    }
+
+    [Fact]
+    public async Task EnsurePendingPaymentsAsync_Idempotent_NoDuplicatesOnRerun()
+    {
+        using var context = GetInMemoryContext();
+        var leaseId = Guid.NewGuid();
+        var propertyId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+
+        context.Users.Add(new User
+        {
+            Id = tenantId,
+            Username = "tenant",
+            Email = "t@test.ch",
+            FullName = "Tenant",
+            Role = UserRoles.Tenant,
+            PasswordHash = "x",
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        context.Properties.Add(new Property
+        {
+            Id = propertyId,
+            Name = "Casa",
+            IsEnabled = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        context.Leases.Add(new Lease
+        {
+            Id = leaseId,
+            PropertyId = propertyId,
+            TenantId = tenantId,
+            Status = LeaseStatus.Active,
+            AgreedPrice = 1500m,
+            StartDate = DateTimeOffset.UtcNow,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        context.SaveChanges();
+
+        var service = new RentTracker.Web.Services.NotificationService(context, new FakeWhatsAppService());
+        await service.EnsurePendingPaymentsAsync();
+        await service.EnsurePendingPaymentsAsync();
+
+        Assert.Equal(2, context.Payments.Where(p => p.LeaseId == leaseId).Count());
+    }
+
+    [Fact]
+    public async Task EnsurePendingPaymentsAsync_DoesNotOverwriteExistingPayment()
+    {
+        using var context = GetInMemoryContext();
+        var leaseId = Guid.NewGuid();
+        var propertyId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+        var period = new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero);
+
+        context.Users.Add(new User
+        {
+            Id = tenantId,
+            Username = "tenant",
+            Email = "t@test.ch",
+            FullName = "Tenant",
+            Role = UserRoles.Tenant,
+            PasswordHash = "x",
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        context.Properties.Add(new Property
+        {
+            Id = propertyId,
+            Name = "Casa",
+            IsEnabled = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        context.Leases.Add(new Lease
+        {
+            Id = leaseId,
+            PropertyId = propertyId,
+            TenantId = tenantId,
+            Status = LeaseStatus.Active,
+            AgreedPrice = 1500m,
+            StartDate = DateTimeOffset.UtcNow,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        context.Payments.Add(new Payment
+        {
+            LeaseId = leaseId,
+            Amount = 1500m,
+            Currency = "BOB",
+            ForPeriod = period,
+            Status = PaymentStatus.Received,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        context.SaveChanges();
+
+        var service = new RentTracker.Web.Services.NotificationService(context, new FakeWhatsAppService());
+        await service.EnsurePendingPaymentsAsync();
+
+        // Existing Received for that period must remain untouched; no duplicate for it.
+        var periodPayments = context.Payments.Where(p => p.LeaseId == leaseId && p.ForPeriod == period).ToList();
+        Assert.Single(periodPayments);
+        Assert.Equal(PaymentStatus.Received, periodPayments[0].Status);
+    }
+
+    [Fact]
+    public async Task EnsurePendingPaymentsAsync_SkipsInactiveLeases()
+    {
+        using var context = GetInMemoryContext();
+        var leaseId = Guid.NewGuid();
+        var propertyId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+
+        context.Users.Add(new User
+        {
+            Id = tenantId,
+            Username = "tenant",
+            Email = "t@test.ch",
+            FullName = "Tenant",
+            Role = UserRoles.Tenant,
+            PasswordHash = "x",
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        context.Properties.Add(new Property
+        {
+            Id = propertyId,
+            Name = "Casa",
+            IsEnabled = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        context.Leases.Add(new Lease
+        {
+            Id = leaseId,
+            PropertyId = propertyId,
+            TenantId = tenantId,
+            Status = LeaseStatus.Closed,
+            AgreedPrice = 1500m,
+            StartDate = DateTimeOffset.UtcNow,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        context.SaveChanges();
+
+        var service = new RentTracker.Web.Services.NotificationService(context, new FakeWhatsAppService());
+        await service.EnsurePendingPaymentsAsync();
+
+        Assert.Empty(context.Payments.Where(p => p.LeaseId == leaseId));
+    }
+
     private class FakeWhatsAppService : RentTracker.Web.Services.IWhatsAppService
     {
         public Task<(bool Success, string? Error)> SendMessageAsync(string phoneNumber, string message)

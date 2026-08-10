@@ -49,6 +49,10 @@ public class NotificationBackgroundService : BackgroundService
                 {
                     _logger.LogInformation("Running notification check at {Time} (local time: {LocalTime})", DateTimeOffset.UtcNow, localTime);
 
+                    // Ensure pending payment entries exist so owners can see expected rent.
+                    // Runs independently of WhatsApp settings/notifications.
+                    await notificationService.EnsurePendingPaymentsAsync();
+
                     await notificationService.ProcessPaymentDueSoonNotificationsAsync();
                     await notificationService.ProcessPaymentTodayNotificationsAsync();
                     await notificationService.ProcessPaymentOverdueNotificationsAsync();
