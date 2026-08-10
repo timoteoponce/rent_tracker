@@ -7,6 +7,7 @@ public interface INotificationService
     Task ProcessPaymentDueSoonNotificationsAsync();
     Task ProcessPaymentTodayNotificationsAsync();
     Task ProcessPaymentOverdueNotificationsAsync();
+    Task EnsurePendingPaymentsAsync();
     Task<NotificationDryRunResult> ProcessDryRunAsync(string testPhoneNumber);
     Task<WhatsAppSettings?> GetSettingsAsync();
     Task SaveSettingsAsync(WhatsAppSettings settings);
