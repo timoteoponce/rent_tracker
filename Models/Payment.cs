@@ -5,7 +5,8 @@ namespace RentTracker.Web.Models;
 
 /// <summary>
 /// Payment entity - represents a rental payment record.
-/// Updates create new records, old records are kept for history.
+/// There is one row per lease + period. Edits update this row in place; the
+/// pre-edit state is snapshotted into <see cref="PaymentAudit"/> for history.
 /// </summary>
 public class Payment
 {
@@ -39,12 +40,6 @@ public class Payment
     [StringLength(200)]
     public string? Notes { get; set; }
 
-    /// <summary>
-    /// If this payment was an update of a previous payment,
-    /// this points to the original payment record.
-    /// </summary>
-    public Guid? PreviousPaymentId { get; set; }
-
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     /// <summary>
@@ -61,6 +56,10 @@ public class Payment
     // Navigation properties
     [ValidateNever]
     public Lease Lease { get; set; } = null!;
+
+    /// <summary>Pre-edit snapshots of this payment, newest by <see cref="PaymentAudit.RecordedAt"/>.</summary>
+    [ValidateNever]
+    public ICollection<PaymentAudit> AuditEntries { get; set; } = new List<PaymentAudit>();
 }
 
 public static class PaymentStatus

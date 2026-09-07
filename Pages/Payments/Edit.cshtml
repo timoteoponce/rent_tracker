@@ -9,16 +9,15 @@
 
 <div class="page-content">
     <div class="alert alert-info">
-        <h4>⚠️ Creating New Payment Record</h4>
         <p>
-            This will create a <strong>new payment record</strong> and preserve the original. 
-            This maintains a complete audit trail of all payment changes.
+            Editing updates this payment in place. The previous values are saved to the
+            payment's audit history.
         </p>
     </div>
 
     <div class="card mb-4">
         <div class="card-header">
-            <h4 class="card-title">Original Payment (Read-only)</h4>
+            <h4 class="card-title">Current Payment</h4>
         </div>
         <div class="form-row">
             <div class="form-group">
@@ -61,7 +60,7 @@
         }
     </div>
 
-    <h4>New Payment Details</h4>
+    <h4>Update</h4>
 
     <form method="post" class="form-horizontal">
         <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
@@ -111,7 +110,7 @@
         </div>
 
         <div class="form-group mt-4">
-            <button type="submit" class="btn btn-primary">Create Updated Payment Record</button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
             <a asp-page="./Index" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
