@@ -90,7 +90,6 @@ public class CreateModel : PageModel
         }
 
         Payment.CreatedAt = DateTimeOffset.UtcNow;
-        Payment.PreviousPaymentId = null; // This is a new payment, not an update
 
         _context.Payments.Add(Payment);
         await _context.SaveChangesAsync();

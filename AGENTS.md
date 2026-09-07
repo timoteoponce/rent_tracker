@@ -432,6 +432,7 @@ var payments = _context.Payments
 | 2026-04-13 | Vanilla CSS vs Bootstrap | No dependency, CSS is now capable enough |
 | 2026-04-13 | VS Code as primary dev environment | Simple, cross-platform, good .NET support |
 | 2026-06-17 | WhatsApp notifications via Meta Cloud API | Enable payment reminders via dedicated SIM card, no external SDK dependency |
+| 2026-09-07 | Payments edit in place + `PaymentAudit` table | The auto-Pending feature exposed that inserting a new row per edit produced duplicate rows per lease+period and double-counted revenue. One `Payment` row per lease+period is now an invariant; pre-edit values go to `PaymentAudit` |
 
 ## Resources
 
